@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>御泉印リスト | 御泉印WEB</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>♨ 御泉印WEB</h1>
+    <nav>
+      <a href="index.html" class="active">リスト</a>
+      <a href="map.html">マップ</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="toolbar">
+      <input type="search" id="q" placeholder="キーワード検索（温泉むすめ・事業者・住所など）">
+      <button class="btn" id="btn-clear" hidden>絞り込みを解除</button>
+      <span class="spacer"></span>
+      <span id="updated" class="count static-only"></span>
+      <span id="count" class="count"></span>
+      <a class="btn" href="onsenin_list.xlsx" download>Excel出力</a>
+      <button class="btn admin-only" id="btn-publish" title="閲覧専用サイトを GitHub Pages に公開します">公開</button>
+      <button class="btn primary admin-only" id="btn-add">＋ 追加</button>
+    </section>
+
+    <div class="table-wrap">
+      <table id="list">
+        <thead>
+          <tr>
+            <th>県名</th>
+            <th>温泉むすめ</th>
+            <th>取扱事業者</th>
+            <th>事業者対応時間</th>
+            <th>取扱事業者住所</th>
+            <th>御泉印<br>バージョン</th>
+            <th>御泉印書影</th>
+            <th>発売中・終了</th>
+            <th>発売開始日</th>
+            <th>発売終了日</th>
+            <th>ピクニック部</th>
+            <th>山岳部</th>
+            <th class="admin-only">操作</th>
+          </tr>
+          <tr id="filter-row" class="filter-row"></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <p id="empty" class="empty" hidden>データがありません。「＋ 追加」から登録してください。</p>
+    </div>
+  </main>
+
+  <dialog id="dlg">
+    <form id="item-form" method="dialog">
+      <h2 id="dlg-title">御泉印を追加</h2>
+      <div class="form-grid">
+        <label>県名 <span class="req">*</span>
+          <select name="prefecture" required></select>
+        </label>
+        <label>温泉むすめの名前 <span class="req">*</span>
+          <input name="musume_name" list="musume-list" required>
+          <datalist id="musume-list"></datalist>
+        </label>
+        <label class="wide">取扱事業者 <span class="req">*</span>
+          <input name="operator" list="operator-list" required>
+          <datalist id="operator-list"></datalist>
+        </label>
+        <label>事業者対応時間
+          <input name="operator_hours" placeholder="例）9:00〜17:00（水曜定休）">
+        </label>
+        <label>御泉印バージョン
+          <input name="version" placeholder="例）第1弾、2025夏限定">
+        </label>
+        <label class="wide">取扱事業者住所
+          <input name="operator_address" placeholder="マップ表示に使用します">
+        </label>
+        <label>発売状況
+          <select name="status">
+            <option value="発売中">発売中</option>
+            <option value="終了">終了</option>
+          </select>
+        </label>
+        <div class="checks">
+          <label class="check"><input type="checkbox" name="picnic"> ピクニック部</label>
+          <label class="check"><input type="checkbox" name="sangaku"> 山岳部</label>
+        </div>
+        <label>発売開始日 <input type="date" name="start_date"></label>
+        <label>発売終了日 <input type="date" name="end_date"></label>
+        <div class="wide image-field">
+          <label>御泉印書影（横幅150pxに自動縮小されます）
+            <input type="file" name="image" accept="image/*">
+          </label>
+          <div class="image-preview">
+            <img id="preview" alt="" hidden>
+            <label class="check" id="remove-image-wrap" hidden>
+              <input type="checkbox" name="remove_image"> 現在の画像を削除
+            </label>
+          </div>
+        </div>
+      </div>
+      <p id="form-error" class="error" hidden></p>
+      <div class="dlg-actions">
+        <button type="button" class="btn" id="btn-cancel">キャンセル</button>
+        <button type="submit" class="btn primary" id="btn-save">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>window.SITE = {"static": true, "updated": "2026-10-19 16:42"};</script>
+  <script src="common.js"></script>
+  <script src="list.js"></script>
+</body>
+</html>

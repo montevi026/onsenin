@@ -1,0 +1,223 @@
+:root {
+  --accent: #b5473a;
+  --accent-dark: #8f3329;
+  --on: #2f8f5b;
+  --off: #8a8a8a;
+  --bg: #faf7f2;
+  --line: #e2dcd2;
+  --text: #2b2622;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+/* 公開用の閲覧専用サイトでは編集系を隠す（html.static は common.js が付ける） */
+.static .admin-only { display: none !important; }
+html:not(.static) .static-only { display: none !important; }
+
+body {
+  margin: 0;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* ---------- ヘッダー ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #fff;
+}
+.site-header h1 { margin: 0; font-size: 20px; letter-spacing: .05em; }
+.site-header nav a {
+  color: #fff;
+  text-decoration: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  opacity: .85;
+}
+.site-header nav a.active { background: rgba(255,255,255,.22); opacity: 1; }
+.site-header nav a:hover { opacity: 1; }
+
+main { padding: 16px 20px 16px; }
+
+/* ---------- ツールバー ---------- */
+.toolbar, .map-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.map-toolbar { margin: 0; padding: 8px 20px; background: #fff; border-bottom: 1px solid var(--line); }
+.toolbar input[type="search"] { flex: 1 1 260px; max-width: 380px; }
+.spacer { flex: 1; }
+.count { color: #6b625a; }
+
+input, select {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid #cfc6ba;
+  border-radius: 6px;
+  background: #fff;
+}
+label.check { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+
+.btn {
+  display: inline-block;
+  font: inherit;
+  padding: 7px 14px;
+  border: 1px solid #cfc6ba;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn:hover { background: #f3eee7; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-dark); }
+.btn.danger { color: #b3261e; }
+.btn.small { padding: 3px 10px; font-size: 12px; }
+.btn:disabled { opacity: .5; cursor: wait; }
+
+/* ---------- 一覧表 ---------- */
+.table-wrap {
+  overflow: auto;
+  max-height: calc(100vh - 150px);  /* 表の中でスクロールし、見出しと絞り込み行を固定する */
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+table { border-collapse: collapse; width: 100%; min-width: 1500px; }
+th, td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+thead { position: sticky; top: 0; z-index: 2; }
+th {
+  background: #f3ece2;
+  font-weight: 600;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+/* 絞り込み行 */
+.filter-row th { padding: 4px 6px; background: #faf5ee; font-weight: normal; }
+.filter-row select,
+.filter-row input { width: 100%; min-width: 80px; padding: 3px 4px; font-size: 12px; }
+.filter-row input[type="date"] { display: block; min-width: 118px; }
+.filter-row input[type="date"] + input[type="date"] { margin-top: 3px; }
+.filter-row .active { border-color: var(--accent); background: #fff1ec; }
+td.c, th { text-align: center; }
+td.img { width: 170px; }
+td.img img { display: block; margin: 0 auto; border-radius: 4px; }
+td.actions { white-space: nowrap; }
+tr.ended td { color: #8a8178; }
+tr.ended td.img img { filter: grayscale(.7); opacity: .75; }
+tr.highlight td { background: #fff4c2; transition: background .4s; }
+.noimg { color: #aaa; font-size: 12px; }
+.empty { text-align: center; color: #8a8178; padding: 40px; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #fff;
+  white-space: nowrap;
+}
+.badge.on { background: var(--on); }
+.badge.off { background: var(--off); }
+
+/* ---------- ダイアログ ---------- */
+dialog {
+  border: none;
+  border-radius: 10px;
+  padding: 0;
+  width: min(720px, 94vw);
+  box-shadow: 0 10px 40px rgba(0,0,0,.25);
+}
+dialog::backdrop { background: rgba(0,0,0,.4); }
+dialog form { padding: 20px 24px; }
+dialog h2 { margin: 0 0 16px; font-size: 18px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.form-grid > label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.form-grid .wide { grid-column: 1 / -1; }
+.form-grid .checks { display: flex; gap: 20px; align-items: flex-end; padding-bottom: 6px; }
+.image-field { display: flex; gap: 16px; align-items: flex-start; }
+.image-field > label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; flex: 1; }
+.image-preview { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.image-preview img { width: 150px; border: 1px solid var(--line); border-radius: 4px; }
+.req { color: var(--accent); }
+.error { color: #b3261e; margin: 12px 0 0; }
+.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* ---------- マップ ---------- */
+.map-body { display: flex; flex-direction: column; height: 100vh; }
+#map { flex: 1; }
+.map-message {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 10px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.15);
+  max-width: 90vw;
+  z-index: 1001;
+}
+.legend { display: inline-flex; align-items: center; gap: 4px; color: #6b625a; }
+.pin-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.pin-dot.on { background: var(--accent); }
+.pin-dot.off { background: var(--off); }
+
+.map-pin {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35);
+  cursor: pointer;
+  margin-bottom: 6px;
+}
+.map-pin.on { background: var(--accent); }
+.map-pin.off { background: var(--off); }
+/* ピンの中の文字は回転を戻す */
+.map-pin > span { transform: rotate(45deg); line-height: 1; }
+
+.iw { max-width: 520px; font-family: inherit; }
+.iw-head { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; margin-bottom: 4px; }
+.iw-head span { color: #6b625a; font-size: 12px; }
+.iw-sub { color: #6b625a; font-size: 12px; }
+.iw-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.iw-card { margin: 0; width: 150px; text-align: center; font-size: 12px; }
+.iw-card img { display: block; border-radius: 4px; }
+.iw-card.ended img { filter: grayscale(.7); opacity: .75; }
+.iw-card figcaption { margin-top: 4px; line-height: 1.5; }
+.iw-noimg {
+  width: 150px; height: 100px; display: grid; place-items: center;
+  background: #f1ece4; color: #aaa; border-radius: 4px;
+}
+.iw-hint { margin-top: 8px; font-size: 11px; color: #9a9088; text-align: right; }
+
+/* Leaflet のツールチップ（書影一覧） */
+.leaflet-tooltip.iw-tooltip {
+  white-space: normal;
+  width: max-content;
+  max-width: 540px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+}
+.leaflet-container { font-family: inherit; }

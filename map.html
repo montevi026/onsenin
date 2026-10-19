@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>御泉印マップ | 御泉印WEB</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="map-body">
+  <header class="site-header">
+    <h1>♨ 御泉印WEB</h1>
+    <nav>
+      <a href="index.html">リスト</a>
+      <a href="map.html" class="active">マップ</a>
+    </nav>
+  </header>
+
+  <div class="map-toolbar">
+    <label class="check"><input type="checkbox" id="only-on-sale"> 発売中のみ表示</label>
+    <span class="legend"><span class="pin-dot on"></span>発売中あり</span>
+    <span class="legend"><span class="pin-dot off"></span>すべて終了</span>
+    <span class="spacer"></span>
+    <span id="map-status" class="count"></span>
+  </div>
+  <div id="map"></div>
+  <p id="map-message" class="map-message" hidden></p>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>window.SITE = {"static": true, "updated": "2026-10-19 16:42"};</script>
+  <script src="common.js"></script>
+  <script src="map.js"></script>
+</body>
+</html>

@@ -274,3 +274,15 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
 .pin-dot.approx { background: var(--accent); border: 1.5px dashed #fff; outline: 1px solid var(--accent); opacity: .8; }
 .iw-approx { margin-top: 4px; font-size: 12px; color: #a0522d; }
 .leaflet-marker-draggable { cursor: move; }
+
+/* スマホでマップ画面を見るときは、地図を広く使うためヘッダーの注意事項を隠す
+   （縦向き：幅767px以下／横向き：タッチ操作で高さ500px以下） */
+@media (max-width: 767px), (pointer: coarse) and (max-height: 500px) {
+  .map-body .site-notice { display: none; }
+  .map-body .mobile-only { display: block; }
+}
+/* スマホでマップ画面を見るときだけ表示する説明 */
+.mobile-only { display: none; }
+.map-hint { flex-basis: 100%; font-size: 12px; color: var(--accent); }
+/* ピンの長押しで、端末の選択・コピーのメニューが出ないようにする */
+.map-pin { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

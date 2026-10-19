@@ -90,7 +90,10 @@ const PIN_GAP = 8;         // ピンとパネルの間隔
 const MIN_CARD_W = 50;     // 書影をここまでは縮める
 let panel;
 
+let panelPinned = false;  // 長押しで開いたパネルは、別の場所をタップするまで開いたままにする
+
 function hidePanel() {
+  panelPinned = false;
   if (panel) panel.hidden = true;
 }
 
@@ -221,8 +224,19 @@ function addMarker(group) {
     title: group.items[0].operator,
     draggable: !SITE.static,
   });
-  marker.on("mouseover", () => showPanel(marker, group));
-  marker.on("mouseout", hidePanel);
+  marker.on("mouseover", () => {
+    panelPinned = false;
+    showPanel(marker, group);
+  });
+  marker.on("mouseout", () => {
+    if (!panelPinned) hidePanel();
+  });
+  // スマホ：ピンを長押しすると書影一覧を表示する（短いタップは今までどおりリストへ移動）
+  marker.on("contextmenu", (e) => {
+    if (e.originalEvent) L.DomEvent.preventDefault(e.originalEvent);  // 端末のメニューを出さない
+    showPanel(marker, group);
+    panelPinned = true;
+  });
   marker.on("dragstart", hidePanel);
   marker.on("dragend", () => saveDraggedPosition(marker, group, onSale));
   marker.on("click", () => {
@@ -247,7 +261,7 @@ async function main() {
     minZoom: 5,
     maxZoom: 18,
   }).addTo(map);
-  map.on("movestart zoomstart", hidePanel);
+  map.on("movestart zoomstart click", hidePanel);  // 地図を動かす・別の場所をタップすると閉じる
 
   const groups = groupByAddress(await fetchItems());
   const failed = [];

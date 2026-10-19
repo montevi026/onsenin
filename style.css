@@ -135,7 +135,6 @@ td.img { width: 170px; }
 td.img img { display: block; margin: 0 auto; border-radius: 4px; }
 td.actions { white-space: nowrap; }
 tr.ended td { color: #8a8178; }
-tr.ended td.img img { filter: grayscale(.7); opacity: .75; }
 tr.highlight td { background: #fff4c2; transition: background .4s; }
 .noimg { color: #aaa; font-size: 12px; }
 .empty { text-align: center; color: #8a8178; padding: 40px; }
@@ -250,7 +249,6 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
   object-fit: contain;
   border-radius: 4px;
 }
-.iw-card.ended img { filter: grayscale(.7); opacity: .75; }
 .iw-card figcaption { margin-top: 4px; line-height: 1.4; overflow-wrap: anywhere; }
 .iw-noimg { display: grid; place-items: center; background: #f1ece4; color: #aaa; }
 .iw-hint { margin-top: 8px; font-size: 11px; color: #9a9088; text-align: right; }

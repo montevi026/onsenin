@@ -22,12 +22,15 @@ function groupByAddress(items) {
   for (const it of sortItems(items)) {
     const addr = it.operator_address.trim();
     if (!addr) continue;
-    if (!groups.has(addr)) groups.set(addr, { address: addr, items: [], lat: null, lng: null });
+    if (!groups.has(addr)) {
+      groups.set(addr, { address: addr, items: [], lat: null, lng: null, geoSource: null });
+    }
     const g = groups.get(addr);
     g.items.push(it);
     if (g.lat == null && it.lat != null) {
       g.lat = it.lat;
       g.lng = it.lng;
+      g.geoSource = it.geo_source;
     }
   }
   return [...groups.values()];
@@ -53,14 +56,14 @@ function infoContent(group, limit = group.items.length) {
   const shown = group.items.slice(0, limit);
   const rest = group.items.length - shown.length;
   const cards = shown.map((it) => `
-    <figure class="iw-card ${it.status === "終了" ? "ended" : ""}">
+    <figure class="iw-card ${effectiveStatus(it) === "終了" ? "ended" : ""}">
       ${it.image_url
         ? `<img src="${it.image_url}" alt="">`
         : `<div class="iw-noimg">画像なし</div>`}
       <figcaption>
         ${oneMusume ? "" : `${escapeHtml(it.musume_name)}<br>`}
         ${escapeHtml(it.version)}
-        <span class="badge ${it.status === "発売中" ? "on" : "off"}">${escapeHtml(it.status)}</span>
+        ${statusBadge(effectiveStatus(it))}
       </figcaption>
     </figure>`).join("");
   return `
@@ -71,8 +74,10 @@ function infoContent(group, limit = group.items.length) {
       </div>
       <div class="iw-sub">${escapeHtml(group.address)}</div>
       ${first.operator_hours ? `<div class="iw-sub">🕘 ${escapeHtml(first.operator_hours)}</div>` : ""}
+      ${group.geoSource === "gsi_coarse" ? `<div class="iw-approx">📍 地図上の位置はおおよそです</div>` : ""}
       <div class="iw-cards">${cards}</div>
-      <div class="iw-hint">${rest > 0 ? `ほか ${rest} 件（` : ""}クリックでリストの該当箇所へ${rest > 0 ? "）" : ""}</div>
+      <div class="iw-hint">${rest > 0 ? `ほか ${rest} 件（` : ""}クリックでリストの該当箇所へ${rest > 0 ? "）" : ""}${
+        SITE.static ? "" : "<br>ピンをドラッグすると位置を修正できます"}</div>
     </div>`;
 }
 
@@ -173,18 +178,53 @@ function showPanel(marker, group) {
   panel.style.top = `${pos[1]}px`;
 }
 
-function addMarker(group) {
-  const onSale = group.items.some((it) => it.status === "発売中");
+function pinIcon(group, onSale) {
   const label = group.items.length > 1 ? group.items.length : "♨";
-  const icon = L.divIcon({
+  const approx = group.geoSource === "gsi_coarse" ? " approx" : "";  // 位置がおおよそのピンは点線の枠
+  return L.divIcon({
     className: "",
-    html: `<div class="map-pin ${onSale ? "on" : "off"}"><span>${label}</span></div>`,
+    html: `<div class="map-pin ${onSale ? "on" : "off"}${approx}"><span>${label}</span></div>`,
     iconSize: [32, 38],
     iconAnchor: [16, 38],
   });
-  const marker = L.marker([group.lat, group.lng], { icon, title: group.items[0].operator });
+}
+
+// 手元の管理画面では、ピンをドラッグして位置を修正できる（その住所の全データに保存）
+async function saveDraggedPosition(marker, group, onSale) {
+  const pos = marker.getLatLng();
+  const name = [...new Set(group.items.map((it) => it.operator))].join(" / ");
+  if (!confirm(`「${name}」の位置をここに変更しますか？`)) {
+    marker.setLatLng([group.lat, group.lng]);
+    return;
+  }
+  try {
+    await apiWrite("/api/location", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: group.address, lat: pos.lat, lng: pos.lng }),
+    });
+    group.lat = pos.lat;
+    group.lng = pos.lng;
+    group.geoSource = "manual";
+    marker.setIcon(pinIcon(group, onSale));
+  } catch (err) {
+    alert(err.message);
+    marker.setLatLng([group.lat, group.lng]);
+  }
+}
+
+function addMarker(group) {
+  // 発売中または発売前のものがあれば赤いピン（すべて終了なら灰色）
+  const onSale = group.items.some((it) => effectiveStatus(it) !== "終了");
+  const marker = L.marker([group.lat, group.lng], {
+    icon: pinIcon(group, onSale),
+    title: group.items[0].operator,
+    draggable: !SITE.static,
+  });
   marker.on("mouseover", () => showPanel(marker, group));
   marker.on("mouseout", hidePanel);
+  marker.on("dragstart", hidePanel);
+  marker.on("dragend", () => saveDraggedPosition(marker, group, onSale));
   marker.on("click", () => {
     location.href = `${LIST_URL}#addr=${encodeURIComponent(group.address)}`;
   });
@@ -220,7 +260,9 @@ async function main() {
         failed.push(g.address);
         continue;
       }
-      Object.assign(g, loc);
+      g.lat = loc.lat;
+      g.lng = loc.lng;
+      g.geoSource = loc.geo_source;
     }
     addMarker(g);
   }

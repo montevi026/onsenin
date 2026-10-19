@@ -73,6 +73,9 @@ body:not(.map-body) main { flex: 1; min-height: 0; display: flex; flex-direction
 .toolbar input[type="search"] { flex: 1 1 260px; max-width: 380px; }
 .spacer { flex: 1; }
 .count { color: #6b625a; }
+/* 最終更新日（上）と件数（下）を縦に並べる */
+.count-box { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.35; }
+#updated { font-size: 12px; }
 
 input, select {
   font: inherit;
@@ -147,6 +150,7 @@ tr.highlight td { background: #fff4c2; transition: background .4s; }
 }
 .badge.on { background: var(--on); }
 .badge.off { background: var(--off); }
+.badge.pre { background: #3a78b5; }
 
 /* ---------- ダイアログ ---------- */
 dialog {
@@ -264,3 +268,9 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
 .drop-hint { font-size: 12px; color: #8a8178; }
 .image-field { border: 2px dashed transparent; border-radius: 8px; padding: 6px; margin: -8px; }
 .image-field.dragover { border-color: var(--accent); background: #fff4f1; }
+
+/* 位置がおおよそ（住所が大字までしか一致しなかった）ピン */
+.map-pin.approx { border: 2px dashed #fff; opacity: .8; }
+.pin-dot.approx { background: var(--accent); border: 1.5px dashed #fff; outline: 1px solid var(--accent); opacity: .8; }
+.iw-approx { margin-top: 4px; font-size: 12px; color: #a0522d; }
+.leaflet-marker-draggable { cursor: move; }

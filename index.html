@@ -22,8 +22,10 @@
       <input type="search" id="q" placeholder="キーワード検索（温泉むすめ・事業者・住所など）">
       <button class="btn" id="btn-clear" hidden>絞り込みを解除</button>
       <span class="spacer"></span>
-      <span id="updated" class="count static-only"></span>
-      <span id="count" class="count"></span>
+      <span class="count-box">
+        <span id="updated" class="count"></span>
+        <span id="count" class="count"></span>
+      </span>
       <a class="btn" href="onsenin_list.xlsx" download>Excel出力</a>
       <button class="btn admin-only" id="btn-publish" title="閲覧専用サイトを GitHub Pages に公開します">公開</button>
       <button class="btn primary admin-only" id="btn-add">＋ 追加</button>
@@ -40,7 +42,7 @@
             <th>取扱事業者住所</th>
             <th>御泉印<br>バージョン</th>
             <th>御泉印書影</th>
-            <th>発売中・終了</th>
+            <th>発売状況</th>
             <th>発売開始日</th>
             <th>発売終了日</th>
             <th>ピクニック部</th>
@@ -115,7 +117,7 @@
     </form>
   </dialog>
 
-  <script>window.SITE = {"static": true, "updated": "2026-10-19 18:42"};</script>
+  <script>window.SITE = {"static": true, "updated": "2026-10-19 20:31"};</script>
   <script src="common.js"></script>
   <script src="list.js"></script>
 </body>

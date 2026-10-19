@@ -15,23 +15,48 @@ const PREFECTURES = [
   "熊本", "大分", "宮崎", "鹿児島", "沖縄",
 ];
 
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// 表示用の発売状況。日付から判定するので、日付が過ぎると自動で切り替わる。
+//   発売開始日が今日より後 → 発売前 / 発売終了日が今日より前 → 終了 / それ以外 → 登録された発売状況
+function effectiveStatus(it) {
+  const today = todayStr();
+  if (it.start_date && it.start_date > today) return "発売前";
+  if (it.end_date && it.end_date < today) return "終了";
+  return it.status;
+}
+
+function statusBadge(status) {
+  const cls = { "発売中": "on", "終了": "off", "発売前": "pre" }[status] || "off";
+  return `<span class="badge ${cls}">${escapeHtml(status)}</span>`;
+}
+
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[c]));
 }
 
-// 県（北→南）→ 温泉むすめ → 事業者 → バージョン の順に並べる
+// 県（北→南）→ 温泉むすめ → 事業者 → 発売開始日（古い順）の順に並べる。
+// 発売開始日が空欄（不明）のものは、その事業者の最初に置き、登録順で並べる。
 function sortItems(items) {
   const prefIndex = (p) => {
     const i = PREFECTURES.indexOf(p);
     return i < 0 ? 999 : i;
   };
+  const byStartDate = (a, b) => {
+    if (!a.start_date || !b.start_date) return !b.start_date - !a.start_date;
+    return a.start_date.localeCompare(b.start_date);
+  };
   return [...items].sort((a, b) =>
     prefIndex(a.prefecture) - prefIndex(b.prefecture) ||
     a.musume_name.localeCompare(b.musume_name, "ja") ||
     a.operator.localeCompare(b.operator, "ja") ||
-    a.version.localeCompare(b.version, "ja", { numeric: true }));
+    byStartDate(a, b) ||
+    a.id - b.id);
 }
 
 async function fetchConfig() {

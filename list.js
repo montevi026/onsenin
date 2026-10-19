@@ -25,7 +25,8 @@ const COLUMN_FILTERS = [
   { key: "operator_address", type: "text" },
   { key: "version", type: "text" },
   { key: "image_url", type: "choice", options: [["yes", "あり"], ["no", "なし"]] },
-  { key: "status", type: "choice", options: [["発売中", "発売中"], ["終了", "終了"]] },
+  { key: "status", type: "choice", value: effectiveStatus,
+    options: [["発売中", "発売中"], ["発売前", "発売前"], ["終了", "終了"]] },
   { key: "start_date", type: "range" },
   { key: "end_date", type: "range" },
   { key: "picnic", ...yesNo("◯") },
@@ -35,7 +36,7 @@ const filters = {};  // key → 値（range は {from, to}）
 
 function matchFilter(f, it) {
   const v = filters[f.key];
-  const val = it[f.key];
+  const val = f.value ? f.value(it) : it[f.key];
   switch (f.type) {
     case "select":
       return !v || val === v;
@@ -163,7 +164,7 @@ function render() {
   const list = filteredItems();
   tbody.innerHTML = list.map((it) => `
     <tr id="item-${it.id}" data-address="${escapeHtml(it.operator_address)}"
-        class="${it.status === "終了" ? "ended" : ""}">
+        class="${effectiveStatus(it) === "終了" ? "ended" : ""}">
       <td class="c">${escapeHtml(it.prefecture)}</td>
       <td>${escapeHtml(it.musume_name)}</td>
       <td>${escapeHtml(it.operator)}</td>
@@ -173,7 +174,7 @@ function render() {
       <td class="c img">${it.image_url
         ? `<img src="${it.image_url}" width="150" alt="${escapeHtml(it.musume_name)} ${escapeHtml(it.version)}" loading="lazy">`
         : `<span class="noimg">画像なし</span>`}</td>
-      <td class="c"><span class="badge ${it.status === "発売中" ? "on" : "off"}">${escapeHtml(it.status)}</span></td>
+      <td class="c">${statusBadge(effectiveStatus(it))}</td>
       <td class="c">${escapeHtml(it.start_date || "")}</td>
       <td class="c">${escapeHtml(it.end_date || "")}</td>
       <td class="c">${it.picnic ? "◯" : ""}</td>
@@ -363,7 +364,7 @@ form.operator.addEventListener("input", fillOperatorInfo);
 form.operator.addEventListener("change", fillOperatorInfo);
 
 form.end_date.addEventListener("change", () => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   if (form.end_date.value && form.end_date.value < today) form.status.value = "終了";
 });
 
@@ -419,13 +420,19 @@ tbody.addEventListener("click", async (e) => {
 
 $("#btn-add").addEventListener("click", () => openDialog());
 
+// 最終更新日（＝最後に「公開」を押した日）を件数の上に表示する。記録は日時だが、表示は日付まで
+function showUpdated(updated) {
+  $("#updated").textContent = updated ? `最終更新 ${updated.slice(0, 10)}` : "";
+}
+
 $("#btn-publish").addEventListener("click", async () => {
   if (!confirm("現在のリストを公開サイト（GitHub Pages）に反映しますか？")) return;
   const btn = $("#btn-publish");
   btn.disabled = true;
   btn.textContent = "公開中…";
   try {
-    const { message } = await apiWrite("/api/publish", { method: "POST" });
+    const { message, updated } = await apiWrite("/api/publish", { method: "POST" });
+    showUpdated(updated);
     alert(message);
   } catch (err) {
     alert(err.message);
@@ -439,7 +446,7 @@ window.addEventListener("hashchange", highlightFromHash);
 
 (async () => {
   initSelects();
-  if (SITE.static) $("#updated").textContent = `最終更新 ${SITE.updated}`;
+  showUpdated(SITE.static ? SITE.updated : (await fetchConfig()).lastPublished);
   try {
     items = await fetchItems();
   } catch (err) {

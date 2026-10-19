@@ -20,7 +20,7 @@ const yesNo = (label) => ({
 const COLUMN_FILTERS = [
   { key: "prefecture", type: "select" },
   { key: "musume_name", type: "select" },
-  { key: "operator", type: "select" },
+  { key: "operator", type: "text" },
   { key: "operator_hours", type: "text" },
   { key: "operator_address", type: "text" },
   { key: "version", type: "text" },
@@ -90,6 +90,26 @@ function buildFilterRow() {
   $("#filter-row").innerHTML = cells.join("") + '<th class="admin-only"></th>';
 }
 
+// 温泉むすめの並び順：県ごとにまとめ、県は最初に登録された順（＝取り込んだ CSV の順）、
+// 県の中は登録順。後から追加した温泉むすめは、同じ県のグループの最後に入る。
+function musumeOrder() {
+  const prefFirst = new Map();    // 県名 → その県で最初に登録された id
+  const musumeFirst = new Map();  // 温泉むすめ → 最初に登録された id
+  const musumePref = new Map();   // 温泉むすめ → 県名
+  for (const it of items) {
+    if (!prefFirst.has(it.prefecture) || it.id < prefFirst.get(it.prefecture)) {
+      prefFirst.set(it.prefecture, it.id);
+    }
+    if (!musumeFirst.has(it.musume_name) || it.id < musumeFirst.get(it.musume_name)) {
+      musumeFirst.set(it.musume_name, it.id);
+      musumePref.set(it.musume_name, it.prefecture);
+    }
+  }
+  const prefRank = (m) => prefFirst.get(musumePref.get(m)) ?? Infinity;
+  return (a, b) => prefRank(a) - prefRank(b) ||
+    (musumeFirst.get(a) ?? Infinity) - (musumeFirst.get(b) ?? Infinity);
+}
+
 // select 型の選択肢を、他の条件で絞り込んだ結果に含まれる値に更新する
 function updateFilterOptions() {
   for (const f of COLUMN_FILTERS.filter((x) => x.type === "select")) {
@@ -97,9 +117,9 @@ function updateFilterOptions() {
     const current = filters[f.key] || "";
     const values = new Set(filteredItems(f.key).map((it) => it[f.key]).filter(Boolean));
     if (current) values.add(current);
-    const sorted = [...values].sort((a, b) => f.key === "prefecture"
-      ? PREFECTURES.indexOf(a) - PREFECTURES.indexOf(b)
-      : a.localeCompare(b, "ja"));
+    const sorted = f.key === "prefecture"
+      ? [...values].sort((a, b) => PREFECTURES.indexOf(a) - PREFECTURES.indexOf(b))
+      : [...values].sort(musumeOrder());
     sel.innerHTML = `<option value="">すべて</option>` +
       sorted.map((v) => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join("");
     sel.value = current;
@@ -201,6 +221,9 @@ function openDialog(item = null) {
   editingId = item ? item.id : null;
   form.reset();
   $("#form-error").hidden = true;
+  $("#operator-hint").hidden = true;
+  $("#drop-status").hidden = true;
+  autoFilled = null;
   $("#dlg-title").textContent = item ? "御泉印を編集" : "御泉印を追加";
   const preview = $("#preview");
   preview.hidden = true;
@@ -225,12 +248,120 @@ form.image.addEventListener("change", () => {
   const file = form.image.files[0];
   const preview = $("#preview");
   if (file) {
+    form.image_url.value = "";  // ファイルを選び直したら、ドロップされた URL は使わない
+    $("#drop-status").hidden = true;
     preview.src = URL.createObjectURL(file);
     preview.hidden = false;
   }
 });
 
+// ---------------------------------------------------------------- 書影のドラッグ＆ドロップ
+// Chrome などから画像をドロップすると、画像ファイルそのものか画像の URL が渡される。
+// ファイルならファイル選択欄に入れ、URL ならサーバーがダウンロードして登録する。
+function setImageFile(file) {
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  form.image.files = dt.files;
+  form.image.dispatchEvent(new Event("change"));
+}
+
+function droppedImageUrl(dt) {
+  const uriList = (dt.getData("text/uri-list") || "").split(/\r?\n/)
+    .map((s) => s.trim()).filter((s) => s && !s.startsWith("#"));
+  const html = dt.getData("text/html");
+  // ページ内の画像をドラッグした場合は、HTML の <img src> が画像本体の URL
+  const imgSrc = html ? new DOMParser().parseFromString(html, "text/html").querySelector("img")?.src : "";
+  const plain = (dt.getData("text/plain") || "").trim();
+  return [imgSrc, ...uriList, plain].find((u) => /^(https?:|data:image\/)/i.test(u || "")) || "";
+}
+
+async function handleImageDrop(dt) {
+  const status = $("#drop-status");
+  const file = [...dt.files].find((f) => f.type.startsWith("image/"));
+  if (file) {
+    setImageFile(file);
+    status.textContent = "ドロップした画像を設定しました";
+    status.hidden = false;
+    return;
+  }
+  const url = droppedImageUrl(dt);
+  // 画像データが URL に埋め込まれている場合や、このサイト内の画像はブラウザで直接読み込む
+  if (url.startsWith("data:") || (url && new URL(url).origin === location.origin)) {
+    const blob = await (await fetch(url)).blob();
+    setImageFile(new File([blob], "dropped", { type: blob.type }));
+    status.textContent = "ドロップした画像を設定しました";
+    status.hidden = false;
+    return;
+  }
+  if (url) {
+    form.image.value = "";
+    form.image_url.value = url;
+    const preview = $("#preview");
+    preview.src = url;
+    preview.hidden = false;
+    status.textContent = "ドロップした画像を設定しました（保存時にダウンロードします）";
+    status.hidden = false;
+    return;
+  }
+  $("#form-error").textContent = "ドロップされたものを画像として読み込めませんでした";
+  $("#form-error").hidden = false;
+}
+
+// 追加・編集画面のどこに落としても受け付ける（画面外に落としてもページが移動しないようにする）
+const imageField = $(".image-field");
+for (const type of ["dragenter", "dragover"]) {
+  document.addEventListener(type, (e) => {
+    e.preventDefault();
+    if (dlg.open) imageField.classList.add("dragover");
+  });
+}
+document.addEventListener("dragleave", (e) => {
+  if (!e.relatedTarget) imageField.classList.remove("dragover");
+});
+document.addEventListener("drop", (e) => {
+  e.preventDefault();
+  imageField.classList.remove("dragover");
+  if (dlg.open) handleImageDrop(e.dataTransfer);
+});
+
 // 終了日が入っていて過去日なら、発売状況を「終了」に寄せる
+// 登録済みの事業者名が入力されたら、その事業者の対応時間・住所を反映する。
+// 同じ名前が複数の県にある場合は、選択中の県のものを優先し、新しく登録されたものから値を採る。
+let autoFilled = null;  // 自動で反映した値（手で直されていなければ、名前の変更時に取り消す）
+
+function fillOperatorInfo() {
+  const name = form.operator.value.trim();
+  const hint = $("#operator-hint");
+  const matches = items.filter((it) => it.operator === name && it.id !== editingId);
+  if (!name || !matches.length) {
+    if (autoFilled &&
+        form.operator_hours.value === autoFilled.hours &&
+        form.operator_address.value === autoFilled.address) {
+      form.operator_hours.value = autoFilled.prevHours;
+      form.operator_address.value = autoFilled.prevAddress;
+    }
+    autoFilled = null;
+    hint.hidden = true;
+    return;
+  }
+  const prev = autoFilled || {
+    prevHours: form.operator_hours.value, prevAddress: form.operator_address.value,
+  };
+  const samePref = matches.filter((it) => it.prefecture === form.prefecture.value);
+  const source = (samePref.length ? samePref : matches).sort((a, b) => b.id - a.id);
+  const pick = (key) => (source.find((it) => it[key]) || {})[key] || "";
+  form.operator_hours.value = pick("operator_hours");
+  form.operator_address.value = pick("operator_address");
+  autoFilled = {
+    hours: form.operator_hours.value, address: form.operator_address.value,
+    prevHours: prev.prevHours, prevAddress: prev.prevAddress,
+  };
+  hint.textContent = "登録済みの事業者のため、対応時間と住所を反映しました";
+  hint.hidden = false;
+}
+form.operator.addEventListener("input", fillOperatorInfo);
+form.operator.addEventListener("change", fillOperatorInfo);
+
 form.end_date.addEventListener("change", () => {
   const today = new Date().toISOString().slice(0, 10);
   if (form.end_date.value && form.end_date.value < today) form.status.value = "終了";
@@ -245,6 +376,7 @@ form.addEventListener("submit", async (e) => {
   fd.set("sangaku", form.sangaku.checked ? "1" : "0");
   fd.set("remove_image", form.remove_image.checked ? "1" : "0");
   if (!form.image.files.length) fd.delete("image");
+  if (!form.image_url.value) fd.delete("image_url");
   const btn = $("#btn-save");
   btn.disabled = true;
   try {

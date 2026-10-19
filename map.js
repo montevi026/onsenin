@@ -44,16 +44,21 @@ async function geocode(address) {
   return res.ok ? res.json() : null;
 }
 
-function infoContent(group) {
+// limit を指定すると、先頭から limit 件だけ表示して「ほか N 件」を添える
+function infoContent(group, limit = group.items.length) {
   const first = group.items[0];
   const operators = [...new Set(group.items.map((it) => it.operator))].join(" / ");
-  const cards = group.items.map((it) => `
+  const musumes = [...new Set(group.items.map((it) => it.musume_name))];
+  const oneMusume = musumes.length === 1;  // 全部同じ温泉むすめなら見出しに1回だけ出す
+  const shown = group.items.slice(0, limit);
+  const rest = group.items.length - shown.length;
+  const cards = shown.map((it) => `
     <figure class="iw-card ${it.status === "終了" ? "ended" : ""}">
       ${it.image_url
-        ? `<img src="${it.image_url}" width="150" alt="">`
+        ? `<img src="${it.image_url}" alt="">`
         : `<div class="iw-noimg">画像なし</div>`}
       <figcaption>
-        ${escapeHtml(it.musume_name)}<br>
+        ${oneMusume ? "" : `${escapeHtml(it.musume_name)}<br>`}
         ${escapeHtml(it.version)}
         <span class="badge ${it.status === "発売中" ? "on" : "off"}">${escapeHtml(it.status)}</span>
       </figcaption>
@@ -62,13 +67,110 @@ function infoContent(group) {
     <div class="iw">
       <div class="iw-head">
         <strong>${escapeHtml(operators)}</strong>
-        <span>${escapeHtml(first.prefecture)}</span>
+        <span>${escapeHtml(first.prefecture)}${oneMusume ? `・${escapeHtml(musumes[0])}` : ""}</span>
       </div>
       <div class="iw-sub">${escapeHtml(group.address)}</div>
       ${first.operator_hours ? `<div class="iw-sub">🕘 ${escapeHtml(first.operator_hours)}</div>` : ""}
       <div class="iw-cards">${cards}</div>
-      <div class="iw-hint">クリックでリストの該当箇所へ</div>
+      <div class="iw-hint">${rest > 0 ? `ほか ${rest} 件（` : ""}クリックでリストの該当箇所へ${rest > 0 ? "）" : ""}</div>
     </div>`;
+}
+
+// ---------------------------------------------------------------- マウスオーバーの書影パネル
+// 書影が多い事業者でも地図からはみ出さないよう、大きさと位置を調整して表示する。
+const PANEL_MARGIN = 8;    // 地図の端との余白
+const CARD_GAP = 10;       // 書影どうしの間隔
+const PIN_HEIGHT = 40;     // ピンの高さ
+const PIN_GAP = 8;         // ピンとパネルの間隔
+const MIN_CARD_W = 50;     // 書影をここまでは縮める
+let panel;
+
+function hidePanel() {
+  if (panel) panel.hidden = true;
+}
+
+function setLayout(w, cols) {
+  panel.style.setProperty("--card-w", `${w}px`);
+  panel.style.setProperty("--cols", cols);
+}
+
+// maxW×maxH に収まる中で、書影がいちばん大きくなる幅と列数を探す（収まらなければ null）
+function findLayout(n, maxW, maxH) {
+  if (maxW < MIN_CARD_W + 24 || maxH < 120) return null;
+  const colsFor = (w, limit) => Math.max(1, Math.min(n, limit,
+    Math.floor((maxW - 24 + CARD_GAP) / (w + CARD_GAP))));
+  const tries = [[150, 3], [150, Infinity]];  // 少ない枚数なら3列までで縦に並べる
+  for (let w = 140; w >= MIN_CARD_W; w -= 10) tries.push([w, Infinity]);
+  for (const [w, limit] of tries) {
+    const cols = colsFor(w, limit);
+    setLayout(w, cols);
+    if (panel.offsetHeight <= maxH && panel.offsetWidth <= maxW) return { w, cols };
+  }
+  return null;
+}
+
+function showPanel(marker, group) {
+  const container = map.getContainer();
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "iw-panel";
+    container.appendChild(panel);
+  }
+  panel.hidden = false;
+  panel.classList.remove("compact");
+  panel.style.left = "0px";
+  panel.style.top = "0px";
+  panel.innerHTML = infoContent(group);
+
+  const mapW = container.clientWidth;
+  const mapH = container.clientHeight;
+  const M = PANEL_MARGIN;
+  const p = map.latLngToContainerPoint(marker.getLatLng());
+  const n = group.items.length;
+
+  // ピンの上・下・右・左の空きのうち、書影をいちばん大きく表示できる側を選ぶ
+  const regions = [
+    { side: "above", maxW: mapW - 2 * M, maxH: p.y - PIN_HEIGHT - PIN_GAP - M },
+    { side: "below", maxW: mapW - 2 * M, maxH: mapH - p.y - PIN_GAP - M },
+    { side: "right", maxW: mapW - p.x - 24 - M, maxH: mapH - 2 * M },
+    { side: "left", maxW: p.x - 24 - M, maxH: mapH - 2 * M },
+  ];
+  let best = null;
+  for (const r of regions) {
+    const layout = findLayout(n, r.maxW, r.maxH);
+    if (layout && (!best || layout.w > best.layout.w)) best = { ...r, layout };
+  }
+  if (!best) {
+    // どの側にも収まらない場合は、ピンに重なっても地図全体を使う
+    let limit = n;
+    let layout = findLayout(n, mapW - 2 * M, mapH - 2 * M);
+    if (!layout) {  // 住所・営業時間の行を省いた簡易表示にする
+      panel.classList.add("compact");
+      layout = findLayout(n, mapW - 2 * M, mapH - 2 * M);
+    }
+    while (!layout && limit > 1) {  // それでも無理なら、入る枚数だけ表示する
+      limit = Math.max(1, Math.floor(limit * 0.8));
+      panel.innerHTML = infoContent(group, limit);
+      layout = findLayout(limit, mapW - 2 * M, mapH - 2 * M);
+    }
+    best = { side: "center", layout: layout || { w: MIN_CARD_W, cols: 1 } };
+  }
+  setLayout(best.layout.w, best.layout.cols);
+
+  const w = panel.offsetWidth;
+  const h = panel.offsetHeight;
+  const clampX = (x) => Math.min(Math.max(x, M), mapW - M - w);
+  const clampY = (y) => Math.min(Math.max(y, M), mapH - M - h);
+  const midY = clampY(p.y - PIN_HEIGHT / 2 - h / 2);
+  const pos = {
+    above: [clampX(p.x - w / 2), p.y - PIN_HEIGHT - PIN_GAP - h],
+    below: [clampX(p.x - w / 2), p.y + PIN_GAP],
+    right: [p.x + 24, midY],
+    left: [p.x - 24 - w, midY],
+    center: [clampX(p.x - w / 2), clampY(p.y - h / 2)],
+  }[best.side];
+  panel.style.left = `${pos[0]}px`;
+  panel.style.top = `${pos[1]}px`;
 }
 
 function addMarker(group) {
@@ -79,14 +181,10 @@ function addMarker(group) {
     html: `<div class="map-pin ${onSale ? "on" : "off"}"><span>${label}</span></div>`,
     iconSize: [32, 38],
     iconAnchor: [16, 38],
-    tooltipAnchor: [0, -38],
   });
   const marker = L.marker([group.lat, group.lng], { icon, title: group.items[0].operator });
-  marker.bindTooltip(infoContent(group), {
-    direction: "top",
-    className: "iw-tooltip",
-    opacity: 1,
-  });
+  marker.on("mouseover", () => showPanel(marker, group));
+  marker.on("mouseout", hidePanel);
   marker.on("click", () => {
     location.href = `${LIST_URL}#addr=${encodeURIComponent(group.address)}`;
   });
@@ -109,6 +207,7 @@ async function main() {
     minZoom: 5,
     maxZoom: 18,
   }).addTo(map);
+  map.on("movestart zoomstart", hidePanel);
 
   const groups = groupByAddress(await fetchItems());
   const failed = [];

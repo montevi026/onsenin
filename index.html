@@ -13,6 +13,8 @@
       <a href="index.html" class="active">リスト</a>
       <a href="map.html">マップ</a>
     </nav>
+    <p class="site-notice">このサイトは個人で集めた情報を掲載しています。事業者の営業時間や、現在の販売状況などは正しくない可能性がありますので、最新情報は必ずXなどを検索してください。（販売終了のものもいつのまにか再販されていたりします！）</p>
+    <p class="site-notice site-contact">何か問題がありましたら<br>X：<a href="https://x.com/momontevi" target="_blank" rel="noopener">@momontevi</a> へ。</p>
   </header>
 
   <main>
@@ -67,6 +69,7 @@
         <label class="wide">取扱事業者 <span class="req">*</span>
           <input name="operator" list="operator-list" required>
           <datalist id="operator-list"></datalist>
+          <span id="operator-hint" class="hint" hidden></span>
         </label>
         <label>事業者対応時間
           <input name="operator_hours" placeholder="例）9:00〜17:00（水曜定休）">
@@ -92,6 +95,9 @@
         <div class="wide image-field">
           <label>御泉印書影（横幅150pxに自動縮小されます）
             <input type="file" name="image" accept="image/*">
+            <input type="hidden" name="image_url">
+            <span class="drop-hint">ブラウザの画像をここへドラッグ＆ドロップしても登録できます</span>
+            <span id="drop-status" class="hint" hidden></span>
           </label>
           <div class="image-preview">
             <img id="preview" alt="" hidden>
@@ -109,7 +115,7 @@
     </form>
   </dialog>
 
-  <script>window.SITE = {"static": true, "updated": "2026-10-19 16:46"};</script>
+  <script>window.SITE = {"static": true, "updated": "2026-10-19 18:42"};</script>
   <script src="common.js"></script>
   <script src="list.js"></script>
 </body>

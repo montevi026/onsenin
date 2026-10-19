@@ -31,6 +31,21 @@ body {
   background: var(--accent);
   color: #fff;
 }
+.site-header { flex-wrap: wrap; row-gap: 8px; }
+/* ヘッダー右上の注意事項（注意書きと連絡先を2つの枠に分け、どちらも2行に収める） */
+.site-header { padding-top: 8px; padding-bottom: 8px; }
+.site-notice {
+  margin: 0;
+  max-width: 640px;
+  padding: 5px 12px;
+  background: rgba(255,255,255,.14);
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+.site-notice:first-of-type { margin-left: auto; }
+.site-contact { white-space: nowrap; margin-left: -14px; }  /* 注意書きの枠との間隔を詰める */
+.site-notice a { color: #fff; font-weight: bold; }
 .site-header h1 { margin: 0; font-size: 20px; letter-spacing: .05em; }
 .site-header nav a {
   color: #fff;
@@ -43,6 +58,8 @@ body {
 .site-header nav a:hover { opacity: 1; }
 
 main { padding: 16px 20px 16px; }
+body:not(.map-body) { display: flex; flex-direction: column; height: 100vh; }
+body:not(.map-body) main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
 /* ---------- ツールバー ---------- */
 .toolbar, .map-toolbar {
@@ -87,7 +104,8 @@ label.check { display: inline-flex; align-items: center; gap: 4px; cursor: point
 /* ---------- 一覧表 ---------- */
 .table-wrap {
   overflow: auto;
-  max-height: calc(100vh - 150px);  /* 表の中でスクロールし、見出しと絞り込み行を固定する */
+  flex: 1;
+  min-height: 0;  /* 表の中でスクロールし、見出しと絞り込み行を固定する */
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -195,29 +213,54 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
 /* ピンの中の文字は回転を戻す */
 .map-pin > span { transform: rotate(45deg); line-height: 1; }
 
-.iw { max-width: 520px; font-family: inherit; }
-.iw-head { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; margin-bottom: 4px; }
-.iw-head span { color: #6b625a; font-size: 12px; }
-.iw-sub { color: #6b625a; font-size: 12px; }
-.iw-cards { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-.iw-card { margin: 0; width: 150px; text-align: center; font-size: 12px; }
-.iw-card img { display: block; border-radius: 4px; }
-.iw-card.ended img { filter: grayscale(.7); opacity: .75; }
-.iw-card figcaption { margin-top: 4px; line-height: 1.5; }
-.iw-noimg {
-  width: 150px; height: 100px; display: grid; place-items: center;
-  background: #f1ece4; color: #aaa; border-radius: 4px;
-}
-.iw-hint { margin-top: 8px; font-size: 11px; color: #9a9088; text-align: right; }
-
-/* Leaflet のツールチップ（書影一覧） */
-.leaflet-tooltip.iw-tooltip {
-  white-space: normal;
+/* マウスオーバーで表示する書影パネル（大きさと位置は map.js が地図に収まるよう調整） */
+.iw-panel {
+  --card-w: 150px;
+  --cols: 3;
+  position: absolute;
+  z-index: 1000;
+  pointer-events: none;   /* パネルがピンのマウス操作を邪魔しないようにする */
   width: max-content;
-  max-width: 540px;
   padding: 10px 12px;
+  background: #fff;
   border-radius: 8px;
+  box-shadow: 0 3px 14px rgba(0,0,0,.3);
   color: var(--text);
   font-size: 13px;
 }
+.iw-head { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; margin-bottom: 4px; }
+.iw-head span { color: #6b625a; font-size: 12px; white-space: nowrap; }
+.iw-sub { color: #6b625a; font-size: 12px; }
+.iw-cards {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--card-w));
+  gap: 10px;
+  margin-top: 10px;
+}
+.iw-card { margin: 0; width: var(--card-w); text-align: center; font-size: 12px; }
+/* 書影の枠は 幅×1.5 で固定（画像の読み込み前でも大きさが決まるように） */
+.iw-card img, .iw-noimg {
+  display: block;
+  width: var(--card-w);
+  aspect-ratio: 2 / 3;
+  object-fit: contain;
+  border-radius: 4px;
+}
+.iw-card.ended img { filter: grayscale(.7); opacity: .75; }
+.iw-card figcaption { margin-top: 4px; line-height: 1.4; overflow-wrap: anywhere; }
+.iw-noimg { display: grid; place-items: center; background: #f1ece4; color: #aaa; }
+.iw-hint { margin-top: 8px; font-size: 11px; color: #9a9088; text-align: right; }
 .leaflet-container { font-family: inherit; }
+
+/* 入力欄の下の補足メッセージ */
+.hint { font-size: 12px; color: var(--on); }
+
+/* 地図がとても小さいときの簡易表示（住所・営業時間の行を省く） */
+.iw-panel.compact .iw-sub { display: none; }
+.iw-panel.compact .iw-cards { margin-top: 6px; }
+.iw-panel.compact .iw-hint { margin-top: 4px; }
+
+/* 書影のドラッグ＆ドロップ */
+.drop-hint { font-size: 12px; color: #8a8178; }
+.image-field { border: 2px dashed transparent; border-radius: 8px; padding: 6px; margin: -8px; }
+.image-field.dragover { border-color: var(--accent); background: #fff4f1; }

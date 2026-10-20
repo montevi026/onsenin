@@ -132,8 +132,13 @@ th {
 .filter-row .active { border-color: var(--accent); background: #fff1ec; }
 td.c, th { text-align: center; }
 td.img { width: 170px; }
-td.img img { display: block; margin: 0 auto; border-radius: 4px; }
+/* 書影の枠は読み込み前から 150×225（縦横比 2:3）で確保する。
+   遅延読み込みで行の高さが変わると、マップから移動したときのスクロール位置がずれるため */
+td.img img { display: block; margin: 0 auto; border-radius: 4px; width: 150px; aspect-ratio: 2 / 3; object-fit: contain; }
 td.actions { white-space: nowrap; }
+/* 備考：改行をそのまま表示し、幅は広がりすぎないようにする */
+td.note { min-width: 160px; max-width: 280px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; }
+textarea { font: inherit; padding: 6px 8px; border: 1px solid #cfc6ba; border-radius: 6px; resize: vertical; }
 tr.ended td { color: #8a8178; }
 tr.highlight td { background: #fff4c2; transition: background .4s; }
 .noimg { color: #aaa; font-size: 12px; }
@@ -256,6 +261,7 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
 
 /* 入力欄の下の補足メッセージ */
 .hint { font-size: 12px; color: var(--on); }
+.hint.warn { color: #b26a00; }
 
 /* 地図がとても小さいときの簡易表示（住所・営業時間の行を省く） */
 .iw-panel.compact .iw-sub { display: none; }

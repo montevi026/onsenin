@@ -31,6 +31,7 @@ const COLUMN_FILTERS = [
   { key: "end_date", type: "range" },
   { key: "picnic", ...yesNo("◯") },
   { key: "sangaku", ...yesNo("◯") },
+  { key: "note", type: "text" },
 ];
 const filters = {};  // key → 値（range は {from, to}）
 
@@ -63,7 +64,7 @@ function isActive(f) {
 function matchKeyword(it) {
   const q = $("#q").value.trim().toLowerCase();
   return !q || [it.prefecture, it.musume_name, it.operator, it.operator_hours,
-    it.operator_address, it.version].join(" ").toLowerCase().includes(q);
+    it.operator_address, it.version, it.note].join(" ").toLowerCase().includes(q);
 }
 
 // exceptKey を指定すると、その項目の条件だけ無視する（選択肢の絞り込み用）
@@ -179,6 +180,7 @@ function render() {
       <td class="c">${escapeHtml(it.end_date || "")}</td>
       <td class="c">${it.picnic ? "◯" : ""}</td>
       <td class="c">${it.sangaku ? "◯" : ""}</td>
+      <td class="note">${escapeHtml(it.note || "")}</td>
       <td class="c actions admin-only">
         <button class="btn small" data-edit="${it.id}">編集</button>
         <button class="btn small danger" data-delete="${it.id}">削除</button>
@@ -214,6 +216,12 @@ function highlightFromHash() {
   if (!rows.length) return;
   rows.forEach((tr) => tr.classList.add("highlight"));
   rows[0].scrollIntoView({ behavior: "smooth", block: "center" });
+  // 念のため、スクロール後に該当行が表の表示範囲に入っていなければ位置を合わせ直す
+  setTimeout(() => {
+    const wrap = $(".table-wrap").getBoundingClientRect();
+    const r = rows[0].getBoundingClientRect();
+    if (r.top < wrap.top || r.bottom > wrap.bottom) rows[0].scrollIntoView({ block: "center" });
+  }, 1500);
 }
 
 // ---------------------------------------------------------------- ダイアログ
@@ -223,6 +231,7 @@ function openDialog(item = null) {
   form.reset();
   $("#form-error").hidden = true;
   $("#operator-hint").hidden = true;
+  $("#master-hint").hidden = true;
   $("#drop-status").hidden = true;
   autoFilled = null;
   $("#dlg-title").textContent = item ? "御泉印を編集" : "御泉印を追加";
@@ -231,7 +240,7 @@ function openDialog(item = null) {
   $("#remove-image-wrap").hidden = true;
   if (item) {
     for (const key of ["prefecture", "musume_name", "operator", "operator_hours",
-      "operator_address", "version", "status", "start_date", "end_date"]) {
+      "operator_address", "version", "status", "start_date", "end_date", "note"]) {
       form[key].value = item[key] || "";
     }
     form.picnic.checked = item.picnic;
@@ -363,6 +372,25 @@ function fillOperatorInfo() {
 form.operator.addEventListener("input", fillOperatorInfo);
 form.operator.addEventListener("change", fillOperatorInfo);
 
+// 登録済みの事業者の対応時間・住所を書き換えるときは、ほかの御泉印にも反映されることを知らせる
+function updateMasterHint() {
+  const hint = $("#master-hint");
+  const pref = form.prefecture.value;
+  const name = form.operator.value.trim();
+  const others = items.filter((it) => it.prefecture === pref && it.operator === name && it.id !== editingId);
+  const master = others[0];
+  const changed = master && (form.operator_hours.value.trim() !== (master.operator_hours || "") ||
+                             form.operator_address.value.trim() !== (master.operator_address || ""));
+  hint.textContent = changed
+    ? `対応時間・住所の変更は、同じ事業者の御泉印 ${others.length} 件にも反映されます`
+    : "";
+  hint.hidden = !changed;
+}
+for (const el of [form.prefecture, form.operator, form.operator_hours, form.operator_address]) {
+  el.addEventListener("input", updateMasterHint);
+  el.addEventListener("change", updateMasterHint);
+}
+
 form.end_date.addEventListener("change", () => {
   const today = todayStr();
   if (form.end_date.value && form.end_date.value < today) form.status.value = "終了";
@@ -386,6 +414,12 @@ form.addEventListener("submit", async (e) => {
       : await apiWrite("/api/items", { method: "POST", body: fd });
     const idx = items.findIndex((it) => it.id === saved.id);
     if (idx >= 0) items[idx] = saved; else items.push(saved);
+    // 事業者マスタの対応時間・住所・位置は、同じ事業者のほかの御泉印にも反映されている
+    for (const it of items) {
+      if (it.operator_id === saved.operator_id) {
+        for (const k of ["operator_hours", "operator_address", "lat", "lng", "geo_source"]) it[k] = saved[k];
+      }
+    }
     dlg.close();
     render();
     location.hash = `item-${saved.id}`;

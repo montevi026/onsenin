@@ -47,6 +47,7 @@
             <th>発売終了日</th>
             <th>ピクニック部</th>
             <th>山岳部</th>
+            <th>備考</th>
             <th class="admin-only">操作</th>
           </tr>
           <tr id="filter-row" class="filter-row"></tr>
@@ -81,6 +82,7 @@
         </label>
         <label class="wide">取扱事業者住所
           <input name="operator_address" placeholder="マップ表示に使用します">
+          <span id="master-hint" class="hint warn" hidden></span>
         </label>
         <label>発売状況
           <select name="status">
@@ -108,6 +110,9 @@
             </label>
           </div>
         </div>
+        <label class="wide">備考
+          <textarea name="note" rows="3" placeholder="自由に入力できます（例：再販あり、要事前連絡 など）"></textarea>
+        </label>
       </div>
       <p id="form-error" class="error" hidden></p>
       <div class="dlg-actions">
@@ -117,7 +122,7 @@
     </form>
   </dialog>
 
-  <script>window.SITE = {"static": true, "updated": "2026-10-20 07:59"};</script>
+  <script>window.SITE = {"static": true, "updated": "2026-10-20 11:53"};</script>
   <script src="common.js"></script>
   <script src="list.js"></script>
 </body>

@@ -101,6 +101,7 @@ const NOTICE_HTML = `
     <li class="notice-important">このサイトは<strong>非公式</strong>サイトです。個人で集めた情報を掲載しています。事業者の営業時間や、現在の販売状況などは正しくない可能性がありますので、最新情報は必ずXなどを検索してください。（販売中表記でも販売終了になっているものや、販売終了のものもいつのまにか再販されていたりします！営業時間も異なる可能性があるので要注意。）</li>
     <li><a href="https://w.atwiki.jp/onsen-in/pages/1.html" target="_blank" rel="noopener">御泉印Wiki</a>には出典情報なども載っていますので、こちらも是非ご参照ください。</li>
     <li>販売開始情報や、売り切れ情報、再販情報はX上を定期クロールして情報を吸い上げて反映させていますが、もしおかしなところがありましたら、X:<a href="https://x.com/momontevi" target="_blank" rel="noopener">@momontevi</a>までご連絡ください。</li>
+    <li>御泉印バージョン名は、Xで公式に言及されている名前があればそれを採用していますが、わからない場合かつ同一事業者で複数種類ある場合は、個人の感覚で名付けしていますのでご了承ください。</li>
   </ul>`;
 
 (function setupNotice() {

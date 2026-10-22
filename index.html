@@ -12,9 +12,8 @@
     <nav>
       <a href="index.html" class="active">リスト</a>
       <a href="map.html">マップ</a>
+      <a href="gallery.html">書影一覧</a>
     </nav>
-    <p class="site-notice">このサイトは個人で集めた情報を掲載しています。事業者の営業時間や、現在の販売状況などは正しくない可能性がありますので、最新情報は必ずXなどを検索してください。（販売終了のものもいつのまにか再販されていたりします！）</p>
-    <p class="site-notice site-contact">何か問題がありましたら<br>X：<a href="https://x.com/momontevi" target="_blank" rel="noopener">@momontevi</a> へ。</p>
   </header>
 
   <main>
@@ -27,6 +26,7 @@
         <span id="count" class="count"></span>
       </span>
       <a class="btn" href="onsenin_list.xlsx" download>Excel出力</a>
+      <button class="btn admin-only" id="btn-export-images" title="書影を JPG にして ZIP でまとめてダウンロードします（管理用）">書影書き出し</button>
       <button class="btn admin-only" id="btn-publish" title="閲覧専用サイトを GitHub Pages に公開します">公開</button>
       <button class="btn primary admin-only" id="btn-add">＋ 追加</button>
     </section>
@@ -66,11 +66,11 @@
           <select name="prefecture" required></select>
         </label>
         <label>温泉むすめの名前 <span class="req">*</span>
-          <input name="musume_name" list="musume-list" required>
+          <input name="musume_name" list="musume-list" autocomplete="off" required>
           <datalist id="musume-list"></datalist>
         </label>
         <label class="wide">取扱事業者 <span class="req">*</span>
-          <input name="operator" list="operator-list" required>
+          <input name="operator" list="operator-list" autocomplete="off" required>
           <datalist id="operator-list"></datalist>
           <span id="operator-hint" class="hint" hidden></span>
         </label>
@@ -122,7 +122,7 @@
     </form>
   </dialog>
 
-  <script>window.SITE = {"static": true, "updated": "2026-10-21 15:47"};</script>
+  <script>window.SITE = {"static": true, "updated": "2026-10-22 16:37"};</script>
   <script src="common.js"></script>
   <script src="list.js"></script>
 </body>

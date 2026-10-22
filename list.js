@@ -161,6 +161,10 @@ function initSelects() {
   buildFilterRow();
 }
 
+function bookImage(it) {
+  return `<img src="${it.image_url}" width="150" alt="${escapeHtml(it.musume_name)} ${escapeHtml(it.version)}" loading="lazy">`;
+}
+
 function render() {
   const list = filteredItems();
   tbody.innerHTML = list.map((it) => `
@@ -173,7 +177,10 @@ function render() {
       <td>${escapeHtml(it.operator_address)}</td>
       <td>${escapeHtml(it.version)}</td>
       <td class="c img">${it.image_url
-        ? `<img src="${it.image_url}" width="150" alt="${escapeHtml(it.musume_name)} ${escapeHtml(it.version)}" loading="lazy">`
+        ? (it.operator_address
+          // 書影をクリックすると、マップでその事業者の場所を拡大して表示する
+          ? `<a href="${MAP_URL}#addr=${encodeURIComponent(it.operator_address.trim())}" title="マップで表示">${bookImage(it)}</a>`
+          : bookImage(it))
         : `<span class="noimg">画像なし</span>`}</td>
       <td class="c">${statusBadge(effectiveStatus(it))}</td>
       <td class="c">${escapeHtml(it.start_date || "")}</td>
@@ -194,11 +201,25 @@ function render() {
 }
 
 function updateDatalists() {
-  const uniq = (key) => [...new Set(items.map((it) => it[key]).filter(Boolean))]
-    .map((v) => `<option value="${escapeHtml(v)}">`).join("");
-  $("#musume-list").innerHTML = uniq("musume_name");
-  $("#operator-list").innerHTML = uniq("operator");
+  updateFormLists();
 }
+
+// 追加・編集画面の候補の絞り込み（並びは登録順＝取り込んだ CSV の順。候補にない名前も入力できる）
+//   温泉むすめ：選んだ県の温泉むすめ（県が未選択なら全員）
+//   取扱事業者：選んだ県の事業者。さらに温泉むすめが選ばれていれば、その温泉むすめの御泉印を扱う事業者
+//               （登録のない新しい温泉むすめが入力された場合は、県の事業者すべて）
+function updateFormLists() {
+  const pref = form.prefecture.value;
+  const musume = form.musume_name.value.trim();
+  const inPref = sortById(items).filter((it) => !pref || it.prefecture === pref);
+  const ofMusume = inPref.filter((it) => it.musume_name === musume);
+  const options = (list, key) => [...new Set(list.map((it) => it[key]).filter(Boolean))]
+    .map((v) => `<option value="${escapeHtml(v)}">`).join("");
+  $("#musume-list").innerHTML = options(inPref, "musume_name");
+  $("#operator-list").innerHTML = options(ofMusume.length ? ofMusume : inPref, "operator");
+}
+
+const sortById = (list) => [...list].sort((a, b) => a.id - b.id);
 
 // マップからの遷移（/#addr=住所 または /#item-ID）で該当行を強調してスクロール
 function highlightFromHash() {
@@ -251,6 +272,7 @@ function openDialog(item = null) {
       $("#remove-image-wrap").hidden = false;
     }
   }
+  updateFormLists();
   dlg.showModal();
 }
 
@@ -369,6 +391,9 @@ function fillOperatorInfo() {
   hint.textContent = "登録済みの事業者のため、対応時間と住所を反映しました";
   hint.hidden = false;
 }
+form.prefecture.addEventListener("change", updateFormLists);
+form.musume_name.addEventListener("input", updateFormLists);
+form.musume_name.addEventListener("change", updateFormLists);
 form.operator.addEventListener("input", fillOperatorInfo);
 form.operator.addEventListener("change", fillOperatorInfo);
 
@@ -458,6 +483,43 @@ $("#btn-add").addEventListener("click", () => openDialog());
 function showUpdated(updated) {
   $("#updated").textContent = updated ? `最終更新 ${updated.slice(0, 10)}` : "";
 }
+
+// 書影の一括書き出し（管理用）：サーバーで JPG に変換して ZIP にまとめ、ダウンロードする
+$("#btn-export-images").addEventListener("click", async () => {
+  const btn = $("#btn-export-images");
+  btn.disabled = true;
+  btn.textContent = "書き出し中…";
+  try {
+    let res;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const pw = sessionStorage.getItem("adminPassword");
+      res = await fetch("/api/export-images.zip", { headers: pw ? { "X-Admin-Password": pw } : {} });
+      if (res.status !== 401) break;
+      const input = prompt("管理者パスワードを入力してください");
+      if (input === null) return;
+      sessionStorage.setItem("adminPassword", input);
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `書き出しに失敗しました (${res.status})`);
+    }
+    // サーバーが付けたファイル名（例：御泉印書影_20261022.zip）で保存する
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const m = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(await res.blob());
+    a.download = m ? decodeURIComponent(m[1]) : "御泉印書影.zip";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "書影書き出し";
+  }
+});
 
 $("#btn-publish").addEventListener("click", async () => {
   if (!confirm("現在のリストを公開サイト（GitHub Pages）に反映しますか？")) return;

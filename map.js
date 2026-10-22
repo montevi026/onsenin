@@ -244,6 +244,7 @@ function addMarker(group) {
   });
   marker.onSale = onSale;
   marker.addTo(map);
+  marker.group = group;
   markers.push(marker);
 }
 
@@ -288,10 +289,32 @@ async function main() {
   }
 
   setStatus(`${markers.length} 地点`);
+  focusFromHash();
   if (failed.length) {
     showMessage(`住所から位置を特定できなかった事業者があります：${failed.join("、")}`);
   }
 }
 
+// リストで書影をクリックして来た場合（map#addr=住所）は、その事業者の場所を拡大して書影一覧を開く
+function focusFromHash() {
+  const hash = decodeURIComponent(location.hash.slice(1));
+  if (!hash.startsWith("addr=")) return;
+  const marker = markers.find((m) => m.group.address === hash.slice(5));
+  if (!marker) {
+    showMessage("この事業者の場所は地図に表示できませんでした");
+    return;
+  }
+  marker.addTo(map);  // 「販売終了の事業者を隠す」で隠れていても表示する
+  map.setView(marker.getLatLng(), 16, { animate: false });
+  setTimeout(() => {
+    showPanel(marker, marker.group);
+    panelPinned = true;
+    const pin = marker.getElement()?.querySelector(".map-pin");
+    if (pin) pin.classList.add("focused");
+    marker.setZIndexOffset(1000);  // 近くのピンより手前に表示する
+  }, 300);
+}
+
 document.getElementById("only-on-sale").addEventListener("change", applyFilter);
+window.addEventListener("hashchange", focusFromHash);
 main().catch((err) => showMessage(err.message));

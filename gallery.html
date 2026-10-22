@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>書影一覧 | 御泉印WEB</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="gallery-body">
+  <header class="site-header">
+    <h1>♨ 御泉印WEB</h1>
+    <nav>
+      <a href="index.html">リスト</a>
+      <a href="map.html">マップ</a>
+      <a href="gallery.html" class="active">書影一覧</a>
+    </nav>
+  </header>
+
+  <main class="gallery">
+    <nav id="pref-index" class="pref-index"></nav>
+    <p class="gallery-hint">書影をクリックすると、御泉印リストの該当箇所へ移動します。<span id="gallery-count" class="count"></span></p>
+    <div id="gallery-sections"></div>
+  </main>
+
+  <script>window.SITE = {"static": true, "updated": "2026-10-22 16:37"};</script>
+  <script src="common.js"></script>
+  <script src="gallery.js"></script>
+</body>
+</html>

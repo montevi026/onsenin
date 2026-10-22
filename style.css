@@ -32,20 +32,53 @@ body {
   color: #fff;
 }
 .site-header { flex-wrap: wrap; row-gap: 8px; }
-/* ヘッダー右上の注意事項（注意書きと連絡先を2つの枠に分け、どちらも2行に収める） */
-.site-header { padding-top: 8px; padding-bottom: 8px; }
-.site-notice {
-  margin: 0;
-  max-width: 640px;
-  padding: 5px 12px;
-  background: rgba(255,255,255,.14);
-  border-radius: 6px;
-  font-size: 11.5px;
-  line-height: 1.55;
+/* ---------- ヘッダー右上の「注意事項」 ----------
+   PC：マウスを乗せると下に吹き出しが開く ／ スマホなど（マウスなし）：タップで画面中央に小さな画面が開く */
+.notice { position: relative; margin-left: auto; }
+.notice-button {
+  font: inherit; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer;
+  padding: 5px 14px; border: 1.5px solid rgba(255,255,255,.7); border-radius: 999px;
+  background: rgba(255,255,255,.12);
 }
-.site-notice:first-of-type { margin-left: auto; }
-.site-contact { white-space: nowrap; margin-left: -14px; }  /* 注意書きの枠との間隔を詰める */
-.site-notice a { color: #fff; font-weight: bold; }
+.notice-button:hover, .notice.open .notice-button { background: rgba(255,255,255,.25); }
+.notice-panel {
+  display: none; position: absolute; top: calc(100% + 10px); right: 0; z-index: 2000;
+  width: min(560px, 90vw); padding: 14px 18px 14px 16px; box-sizing: border-box;
+  background: #fff; color: var(--text); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.28);
+  font-size: 13px; line-height: 1.7;
+}
+.notice-panel::before {  /* 吹き出しの三角 */
+  content: ""; position: absolute; top: -8px; right: 28px;
+  border: 8px solid transparent; border-top: 0; border-bottom-color: #fff;
+}
+.notice-panel ul { margin: 0; padding-left: 1.2em; }
+.notice-panel li + li { margin-top: 8px; }
+/* 「このサイトは非公式サイトです…」の項目は背景色を付けて強調する */
+.notice-panel li.notice-important {
+  list-style: none; margin-left: -1.2em; margin-bottom: 10px; padding: 8px 12px;
+  background: #fff4d6; border-left: 4px solid #e0a100; border-radius: 6px;
+}
+.notice-panel a { color: var(--accent); font-weight: bold; overflow-wrap: anywhere; }
+.notice-close {
+  display: none; position: absolute; top: 6px; right: 8px; width: 30px; height: 30px;
+  border: none; background: none; font-size: 20px; color: #8a8178; cursor: pointer;
+}
+.notice-backdrop { display: none; }
+@media (hover: hover) {
+  .notice:hover .notice-panel, .notice:focus-within .notice-panel { display: block; }
+  /* ボタンと吹き出しの間でマウスが外れて閉じないよう、すき間を埋める */
+  .notice:hover::after { content: ""; position: absolute; top: 100%; right: 0; width: 100%; height: 12px; }
+}
+.notice.open .notice-panel { display: block; }
+@media (hover: none) {
+  .notice.open .notice-panel {
+    position: fixed; top: 50%; left: 50%; right: auto; transform: translate(-50%, -50%);
+    width: min(92vw, 520px); max-height: 80vh; overflow-y: auto; padding-top: 34px;
+  }
+  .notice-panel::before { display: none; }
+  .notice-close { display: block; }
+  .notice.open .notice-backdrop { display: block; position: fixed; inset: 0; z-index: 1999; background: rgba(0,0,0,.4); }
+}
 .site-header h1 { margin: 0; font-size: 20px; letter-spacing: .05em; }
 .site-header nav a {
   color: #fff;
@@ -273,16 +306,18 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
 .image-field { border: 2px dashed transparent; border-radius: 8px; padding: 6px; margin: -8px; }
 .image-field.dragover { border-color: var(--accent); background: #fff4f1; }
 
+/* リストから移動してきたときに目立たせるピン */
+.map-pin.focused { box-shadow: 0 0 0 4px rgba(255, 213, 79, .95), 0 2px 8px rgba(0,0,0,.4); }
+td.img a img:hover { outline: 2px solid var(--accent); }
+
 /* 位置がおおよそ（住所が大字までしか一致しなかった）ピン */
 .map-pin.approx { border: 2px dashed #fff; opacity: .8; }
 .pin-dot.approx { background: var(--accent); border: 1.5px dashed #fff; outline: 1px solid var(--accent); opacity: .8; }
 .iw-approx { margin-top: 4px; font-size: 12px; color: #a0522d; }
 .leaflet-marker-draggable { cursor: move; }
 
-/* スマホでマップ画面を見るときは、地図を広く使うためヘッダーの注意事項を隠す
-   （縦向き：幅767px以下／横向き：タッチ操作で高さ500px以下） */
+/* スマホでマップ画面を見るとき（縦向き：幅767px以下／横向き：タッチ操作で高さ500px以下） */
 @media (max-width: 767px), (pointer: coarse) and (max-height: 500px) {
-  .map-body .site-notice { display: none; }
   .map-body .mobile-only { display: block; }
 }
 /* スマホでマップ画面を見るときだけ表示する説明 */
@@ -290,3 +325,46 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
 .map-hint { flex-basis: 100%; font-size: 12px; color: var(--accent); }
 /* ピンの長押しで、端末の選択・コピーのメニューが出ないようにする */
 .map-pin { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* ---------- 書影一覧 ---------- */
+.gallery-body main.gallery { display: block; overflow-y: auto; padding-top: 12px; }
+/* 県名ボタン：地方ごとのまとまりを横につなげ、「／」で区切る（地方の途中では折り返さない） */
+.pref-index { display: flex; flex-wrap: wrap; align-items: center; row-gap: 6px; margin-bottom: 10px; }
+.pref-region { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.pref-region:not(:last-child)::after { content: "／"; margin: 0 8px 0 6px; color: #b3a99c; }
+.pref-region-name { margin-right: 2px; font-size: 12px; font-weight: bold; color: #6b625a; }
+.pref-region-links { display: inline-flex; gap: 4px; }
+.pref-index a {
+  padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px;
+  background: #fff; color: var(--text); text-decoration: none; font-size: 12.5px;
+}
+.pref-index a:hover { border-color: var(--accent); color: var(--accent); }
+.gallery-hint { margin: 0 0 12px; font-size: 12px; color: #8a8178; }
+.gallery-pref { margin-bottom: 28px; scroll-margin-top: 8px; }
+.gallery-pref h2 {
+  margin: 0 0 10px; padding: 6px 12px; font-size: 18px; color: #fff;
+  background: var(--accent); border-radius: 6px;
+}
+.gallery-musume { margin: 0 0 18px 4px; }
+.gallery-musume h3 {
+  display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px;
+  padding-bottom: 4px; font-size: 15px; border-bottom: 2px solid var(--line);
+}
+.gallery-musume h3 .count { font-size: 12px; font-weight: normal; }
+.gallery-cards { display: flex; flex-wrap: wrap; gap: 10px; }
+.gallery-card { display: block; width: 150px; border-radius: 4px; text-decoration: none; transition: transform .15s; }
+.gallery-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,.2); }
+.gallery-card img { display: block; width: 150px; aspect-ratio: 2 / 3; object-fit: contain; border-radius: 4px; }
+/* 書影がない場合の「NO IMAGE」画像（右下にバージョン名） */
+.noimage {
+  position: relative; display: grid; place-items: center;
+  width: 150px; aspect-ratio: 2 / 3; border-radius: 4px;
+  background: repeating-linear-gradient(45deg, #ece6dc, #ece6dc 10px, #e4ddd1 10px, #e4ddd1 20px);
+  border: 1px solid #d8cfc2; box-sizing: border-box;
+}
+.noimage-text { font-weight: bold; letter-spacing: .1em; color: #b3a99c; font-size: 15px; }
+.noimage-label {
+  position: absolute; right: 6px; bottom: 6px; max-width: calc(100% - 12px);
+  padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,.85);
+  color: var(--text); font-size: 11px; line-height: 1.4; text-align: right; overflow-wrap: anywhere;
+}

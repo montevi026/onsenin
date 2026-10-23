@@ -37,12 +37,15 @@ function labelOf(it) {
 }
 
 function cardHtml(it) {
-  // マウスを乗せたときの表示：「バージョン名（事業者名）」、バージョン名が「-」なら事業者名だけ
-  const title = labelOf(it) === it.operator ? it.operator : `${it.version}（${it.operator}）`;
   const inner = it.image_url
     ? `<img src="${it.image_url}" alt="${escapeHtml(`${it.musume_name} ${labelOf(it)}`)}" loading="lazy">`
     : `<span class="noimage"><span class="noimage-text">NO IMAGE</span><span class="noimage-label">${escapeHtml(labelOf(it))}</span></span>`;
-  return `<a class="gallery-card" href="${LIST_URL}#item-${it.id}" title="${escapeHtml(title)}">${inner}</a>`;
+  // マウスを乗せると、書影の上部に取扱事業者名を重ねて表示する
+  const operator = `<span class="gallery-operator">${escapeHtml(it.operator)}</span>`;
+  // 発売状況（「発売状況を表示」にチェックが入っているときだけ見える）
+  const status = `<span class="gallery-status">${statusBadge(effectiveStatus(it))}</span>`;
+  return `<a class="gallery-card" href="${LIST_URL}#item-${it.id}" aria-label="${escapeHtml(`${it.musume_name} ${labelOf(it)}（${it.operator}）`)}">` +
+    `<span class="gallery-thumb">${inner}${operator}</span>${status}</a>`;
 }
 
 // 上部の県名ボタンを並べる地方の区分（一般的な8地方区分。三重は近畿）
@@ -89,6 +92,26 @@ function render(prefs, total) {
         </div>`).join("")}
     </section>`).join("");
 }
+
+// 表示オプションのチェックボックス。初期状態はどちらもオン。
+// 切り替えた状態はブラウザに記憶し、次に書影一覧を開いたときも引き継ぐ
+//   発売状況を表示            → 各書影の下に発売状況のバッジ
+//   マウスオーバーで事業者表示 → マウスを乗せたときに書影の上部へ事業者名
+function setupOption(checkboxId, storageKey, className) {
+  const checkbox = document.getElementById(checkboxId);
+  const apply = () => document.getElementById("gallery-sections").classList.toggle(className, checkbox.checked);
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved !== null) checkbox.checked = saved === "1";
+  } catch { /* 記憶できない環境（プライベートブラウズなど）では初期状態のまま */ }
+  apply();
+  checkbox.addEventListener("change", () => {
+    apply();
+    try { localStorage.setItem(storageKey, checkbox.checked ? "1" : "0"); } catch { /* 記憶できなくても表示は切り替える */ }
+  });
+}
+setupOption("show-status", "onsenin.gallery.showStatus", "show-status");
+setupOption("show-operator", "onsenin.gallery.showOperator", "show-operator");
 
 (async () => {
   try {

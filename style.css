@@ -355,6 +355,21 @@ td.img a img:hover { outline: 2px solid var(--accent); }
 .gallery-card { display: block; width: 150px; border-radius: 4px; text-decoration: none; transition: transform .15s; }
 .gallery-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,.2); }
 .gallery-card img { display: block; width: 150px; aspect-ratio: 2 / 3; object-fit: contain; border-radius: 4px; }
+.gallery-options { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-bottom: 6px; font-size: 13px; }
+/* マウスを乗せたときに書影の上部へ重ねる取扱事業者名 */
+.gallery-thumb { position: relative; display: block; }
+.gallery-operator {
+  position: absolute; top: 0; left: 0; right: 0; padding: 4px 6px;
+  background: rgba(0, 0, 0, .68); color: #fff; font-size: 12px; line-height: 1.4;
+  text-align: center; overflow-wrap: anywhere; border-radius: 4px 4px 0 0;
+  opacity: 0; transition: opacity .12s; pointer-events: none;
+}
+/* 「マウスオーバーで事業者表示」がオンのときだけ表示する */
+.show-operator .gallery-card:hover .gallery-operator,
+.show-operator .gallery-card:focus-visible .gallery-operator { opacity: 1; }
+/* 発売状況のバッジは「発売状況を表示」にチェックが入っているときだけ書影の下に出す */
+.gallery-status { display: none; margin-top: 4px; text-align: center; }
+.show-status .gallery-status { display: block; }
 /* 書影がない場合の「NO IMAGE」画像（右下にバージョン名） */
 .noimage {
   position: relative; display: grid; place-items: center;

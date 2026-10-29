@@ -69,9 +69,31 @@ function matchKeyword(it) {
 
 // exceptKey を指定すると、その項目の条件だけ無視する（選択肢の絞り込み用）
 function filteredItems(exceptKey = null) {
-  return sortItems(items).filter((it) => matchKeyword(it) &&
+  const list = sortItems(items).filter((it) => matchKeyword(it) &&
     COLUMN_FILTERS.every((f) => f.key === exceptKey || matchFilter(f, it)));
+  return dateSort ? sortByStartDate(list, dateSort) : list;
 }
+
+// ---------------------------------------------------------------- 発売日での並べ替え
+// 見出し「発売開始日」をクリックするたびに 古い順 → 新しい順 → 元の並び と切り替える。
+// 発売日が入力されていないものは一番古いものとみなす（古い順では一番上、新しい順では一番下）。
+// 同じ日付は元の並びのまま
+let dateSort = null;  // null（元の並び） / "asc"（古い順） / "desc"（新しい順）
+
+function sortByStartDate(list, order) {
+  return [...list].sort((a, b) => {
+    const cmp = (a.start_date || "").localeCompare(b.start_date || "");  // 空欄は一番古い扱い
+    return order === "asc" ? cmp : -cmp;
+  });
+}
+
+$("#sort-start-date").addEventListener("click", () => {
+  dateSort = { null: "asc", asc: "desc", desc: null }[dateSort];
+  const th = $("#sort-start-date");
+  th.classList.toggle("sorted", !!dateSort);
+  th.querySelector(".sort-mark").textContent = { asc: "▲", desc: "▼" }[dateSort] || "";
+  render();
+});
 
 function buildFilterRow() {
   const cells = COLUMN_FILTERS.map((f) => {

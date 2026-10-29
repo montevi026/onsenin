@@ -156,6 +156,12 @@ th {
   font-size: 13px;
 }
 
+/* 並べ替えできる見出し（発売開始日） */
+th.sortable { cursor: pointer; user-select: none; }
+th.sortable:hover { background: #ebe1d3; }
+th.sortable.sorted { color: var(--accent); }
+.sort-mark { margin-left: 4px; font-size: 11px; }
+
 /* 絞り込み行 */
 .filter-row th { padding: 4px 6px; background: #faf5ee; font-weight: normal; }
 .filter-row select,

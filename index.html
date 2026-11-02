@@ -22,10 +22,13 @@
       <button class="btn" id="btn-clear" hidden>絞り込みを解除</button>
       <span class="spacer"></span>
       <span class="count-box">
-        <span id="updated" class="count"></span>
         <span id="count" class="count"></span>
+        <span id="collected-count" class="count collected-count"></span>
       </span>
-      <a class="btn" href="onsenin_list.xlsx" download>Excel出力</a>
+      <a class="btn" id="btn-excel" href="onsenin_list.xlsx" download>Excel出力</a>
+      <button class="btn" id="btn-collection-export" title="入手済みのチェック状況をファイルに保存します（バックアップ用）">取得状況を出力</button>
+      <button class="btn" id="btn-collection-import" title="出力したファイルから入手済みのチェック状況を復元します">取得状況を取り込む</button>
+      <input type="file" id="collection-file" accept=".json,application/json" hidden>
       <button class="btn admin-only" id="btn-export-images" title="書影を JPG にして ZIP でまとめてダウンロードします（管理用）">書影書き出し</button>
       <button class="btn admin-only" id="btn-publish" title="閲覧専用サイトを GitHub Pages に公開します">公開</button>
       <button class="btn primary admin-only" id="btn-add">＋ 追加</button>
@@ -35,6 +38,7 @@
       <table id="list">
         <thead>
           <tr>
+            <th class="collect-col" title="入手した御泉印にチェックを付けると、このブラウザに記録されます">入手</th>
             <th>県名</th>
             <th>温泉むすめ</th>
             <th>取扱事業者</th>
@@ -122,7 +126,8 @@
     </form>
   </dialog>
 
-  <script>window.SITE = {"static": true, "updated": "2026-10-31 20:12"};</script>
+  <script src="vendor/jszip.min.js"></script>
+  <script>window.SITE = {"static": true, "updated": "2026-11-02 20:31"};</script>
   <script src="common.js"></script>
   <script src="list.js"></script>
 </body>

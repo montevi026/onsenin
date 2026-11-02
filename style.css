@@ -35,6 +35,16 @@ body {
 /* ---------- ヘッダー右上の「注意事項」 ----------
    PC：マウスを乗せると下に吹き出しが開く ／ スマホなど（マウスなし）：タップで画面中央に小さな画面が開く */
 .notice { position: relative; margin-left: auto; }
+.notice.updated-info + .notice { margin-left: 10px; }  /* 最終更新 → 注意事項 の順に右寄せで並べる */
+.updated-info .notice-button {
+  font-size: 12.5px; font-weight: normal; border-color: transparent; background: none;
+  text-decoration: underline dotted rgba(255,255,255,.7); text-underline-offset: 3px;
+}
+.updated-info .notice-panel { width: min(420px, 90vw); }
+.history { margin: 0; }
+.history dt { font-weight: bold; color: var(--accent); }
+.history dt:not(:first-child) { margin-top: 10px; }
+.history dd { margin: 2px 0 0 1em; }
 .notice-button {
   font: inherit; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer;
   padding: 5px 14px; border: 1.5px solid rgba(255,255,255,.7); border-radius: 999px;
@@ -156,6 +166,13 @@ th {
   font-size: 13px;
 }
 
+/* 入手状況（このブラウザに記録するチェック） */
+.collect-col { width: 52px; }
+td.collect-col input { width: 20px; height: 20px; cursor: pointer; accent-color: var(--on); }
+tr.is-collected td { background: #eef8f0; }
+tr.is-collected.highlight td { background: #fff4c2; }
+.collected-count { color: var(--on); font-weight: bold; font-size: 12px; }
+
 /* 並べ替えできる見出し（発売開始日） */
 th.sortable { cursor: pointer; user-select: none; }
 th.sortable:hover { background: #ebe1d3; }
@@ -236,6 +253,13 @@ dialog h2 { margin: 0 0 16px; font-size: 18px; }
   z-index: 1001;
 }
 .legend { display: inline-flex; align-items: center; gap: 4px; color: #6b625a; }
+/* マップの入手状況の切り替え（全て表示／未入手だけ／入手済だけ） */
+.collect-filter { display: inline-flex; border: 1px solid #cfc6ba; border-radius: 999px; overflow: hidden; background: #fff; }
+.collect-filter label { cursor: pointer; }
+.collect-filter input { position: absolute; opacity: 0; pointer-events: none; }
+.collect-filter label span, .collect-filter label { padding: 3px 12px; font-size: 13px; }
+.collect-filter label:has(input:checked) { background: var(--on); color: #fff; }
+.collect-filter label + label { border-left: 1px solid #cfc6ba; }
 .pin-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
 .pin-dot.on { background: var(--accent); }
 .pin-dot.off { background: var(--off); }

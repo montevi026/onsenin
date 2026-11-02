@@ -102,19 +102,35 @@ const NOTICE_HTML = `
     <li><a href="https://w.atwiki.jp/onsen-in/pages/1.html" target="_blank" rel="noopener">御泉印Wiki</a>には出典情報なども載っていますので、こちらも是非ご参照ください。</li>
     <li>販売開始情報や、売り切れ情報、再販情報はX上を定期クロールして情報を吸い上げて反映させていますが、もしおかしなところがありましたら、X:<a href="https://x.com/momontevi" target="_blank" rel="noopener">@momontevi</a>までご連絡ください。</li>
     <li>御泉印バージョン名は、Xで公式に言及されている名前があればそれを採用していますが、わからない場合かつ同一事業者で複数種類ある場合は、個人の感覚で名付けしていますのでご了承ください。</li>
+    <li>取得状況はブラウザごとに記憶されます。また、ブラウザの閲覧データを消去した場合消えますので、定期的に取得状況をローカルに出力保存してください</li>
   </ul>`;
 
-(function setupNotice() {
-  const header = document.querySelector(".site-header");
-  if (!header) return;
+// ---------------------------------------------------------------- ヘッダー右上の「最終更新」の更新履歴
+// マウスを乗せる（スマホはタップ）と表示する。新しいものを上に追記していく
+const UPDATE_HISTORY = [
+  { date: "2026/11/2", items: [
+    "個人の取得状況を保存できるようにしました",
+    "平湯みつばの平湯温泉案内所御泉印を追加しました",
+    "阿蘇ほむらの大観荘御泉印2種を追加しました",
+  ] },
+];
+
+const UPDATE_HISTORY_HTML = `
+  <dl class="history">${UPDATE_HISTORY.map((h) => `
+    <dt>${escapeHtml(h.date)}</dt>
+    ${h.items.map((t) => `<dd>${escapeHtml(t)}</dd>`).join("")}`).join("")}
+  </dl>`;
+
+// ヘッダーに、ボタンと吹き出し（PC：マウスを乗せると開く／スマホ：タップで画面中央に開く）を置く
+function addHeaderPopover(header, { className, buttonHtml, panelHtml, label }) {
   const box = document.createElement("div");
-  box.className = "notice";
+  box.className = `notice ${className}`;
   box.innerHTML = `
-    <button type="button" class="notice-button" aria-haspopup="dialog" aria-expanded="false">注意事項</button>
+    <button type="button" class="notice-button" aria-haspopup="dialog" aria-expanded="false">${buttonHtml}</button>
     <div class="notice-backdrop"></div>
-    <div class="notice-panel" role="dialog" aria-label="注意事項">
+    <div class="notice-panel" role="dialog" aria-label="${label}">
       <button type="button" class="notice-close" aria-label="閉じる">×</button>
-      ${NOTICE_HTML}
+      ${panelHtml}
     </div>`;
   header.appendChild(box);
   const button = box.querySelector(".notice-button");
@@ -131,4 +147,93 @@ const NOTICE_HTML = `
   box.querySelector(".notice-backdrop").addEventListener("click", () => setOpen(false));
   document.addEventListener("click", (e) => { if (!box.contains(e.target)) setOpen(false); });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") setOpen(false); });
+  return box;
+}
+
+// 最終更新日（＝最後に「公開」を押した日）を表示する。記録は日時だが、表示は日付まで
+function showUpdated(updated) {
+  const el = document.getElementById("updated-text");
+  if (el) el.textContent = updated ? updated.slice(0, 10) : "—";
+}
+
+(function setupHeader() {
+  const header = document.querySelector(".site-header");
+  if (!header) return;
+  addHeaderPopover(header, {
+    className: "updated-info", label: "更新履歴",
+    buttonHtml: `最終更新 <span id="updated-text"></span>`, panelHtml: UPDATE_HISTORY_HTML,
+  });
+  addHeaderPopover(header, {
+    className: "notice-main", label: "注意事項", buttonHtml: "注意事項", panelHtml: NOTICE_HTML,
+  });
+  if (SITE.static) showUpdated(SITE.updated);
+  else fetchConfig().then((c) => showUpdated(c.lastPublished)).catch(() => showUpdated(""));
+})();
+
+// ---------------------------------------------------------------- 入手状況（各ユーザーのブラウザに保存）
+// 入手済みの御泉印の ID を、このブラウザの localStorage に保存する。サーバーには送らない。
+// 閲覧データを消すと消えるので、出力・取り込み（JSON ファイル）でバックアップ・復元できるようにする。
+const collection = (() => {
+  const KEY = "onsenin.collected";
+  let ids = new Set();
+  try {
+    ids = new Set((JSON.parse(localStorage.getItem(KEY) || "[]")).map(Number));
+  } catch { /* 読めない場合は空から始める */ }
+  const save = () => {
+    try { localStorage.setItem(KEY, JSON.stringify([...ids].sort((a, b) => a - b))); }
+    catch { alert("入手状況を保存できませんでした（ブラウザの設定で保存が許可されていない可能性があります）"); }
+  };
+  const nameKey = (it) => `${it.musume_name}\t${it.version}\t${it.operator}`;
+  return {
+    has: (id) => ids.has(Number(id)),
+    set(id, on) {
+      if (on) ids.add(Number(id)); else ids.delete(Number(id));
+      save();
+    },
+    count: (items) => items.filter((it) => ids.has(it.id)).length,
+
+    // 出力：ID と、中身がわかるよう温泉むすめ・バージョン・事業者の名前を入れる
+    exportFile(items) {
+      const byId = new Map(items.map((it) => [it.id, it]));
+      const data = {
+        format: "onsenin-collection", version: 1, exported_at: new Date().toISOString(),
+        collected: [...ids].sort((a, b) => a - b).map((id) => {
+          const it = byId.get(id);
+          return it ? { id, musume_name: it.musume_name, version: it.version, operator: it.operator } : { id };
+        }),
+      };
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }));
+      a.download = `御泉印_取得状況_${todayStr().replace(/-/g, "")}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      return data.collected.length;
+    },
+
+    // 取り込み：ファイルの内容で今の記録を置き換える。
+    // ID が見つからない場合（登録し直されて ID が変わったなど）は、名前が一致する御泉印を探して復元する
+    parseFile(text, items) {
+      const data = JSON.parse(text);
+      if (data.format !== "onsenin-collection" || !Array.isArray(data.collected)) {
+        throw new Error("御泉印WEBの取得状況ファイルではありません");
+      }
+      const known = new Set(items.map((it) => it.id));
+      const byName = new Map(items.map((it) => [nameKey(it), it.id]));
+      const result = new Set();
+      let unmatched = 0;
+      for (const c of data.collected) {
+        const byNameId = c.musume_name !== undefined ? byName.get(nameKey(c)) : undefined;
+        if (known.has(Number(c.id)) && (byNameId === undefined || byNameId === Number(c.id))) result.add(Number(c.id));
+        else if (byNameId !== undefined) result.add(byNameId);
+        else { result.add(Number(c.id)); unmatched++; }  // 今は見当たらないが、記録としては残す
+      }
+      return { ids: result, unmatched };
+    },
+    replace(newIds) {
+      ids = new Set(newIds);
+      save();
+    },
+  };
 })();

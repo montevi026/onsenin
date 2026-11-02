@@ -238,21 +238,46 @@ function addMarker(group) {
     panelPinned = true;
   });
   marker.on("dragstart", hidePanel);
-  marker.on("dragend", () => saveDraggedPosition(marker, group, onSale));
+  marker.on("dragend", () => saveDraggedPosition(marker, group, marker.onSale));
   marker.on("click", () => {
     location.href = `${LIST_URL}#addr=${encodeURIComponent(group.address)}`;
   });
   marker.onSale = onSale;
+  marker.shownCount = group.items.length;
   marker.addTo(map);
   marker.group = group;
   markers.push(marker);
 }
 
+// 表示の絞り込み
+//   入手状況（全て表示／未入手だけ／入手済だけ）：ピンの数字と書影一覧も、条件に合う御泉印だけにする
+//   販売終了の事業者を隠す：条件に合う御泉印がすべて終了している事業者のピンを隠す
+function collectMode() {
+  return document.querySelector('input[name="collect-filter"]:checked').value;
+}
+
 function applyFilter() {
   const onlyOnSale = document.getElementById("only-on-sale").checked;
+  const mode = collectMode();
+  let shown = 0;
   for (const m of markers) {
-    if (!onlyOnSale || m.onSale) m.addTo(map); else m.remove();
+    const g = m.group;
+    g.items = g.allItems.filter((it) => mode === "all" || collection.has(it.id) === (mode === "yes"));
+    const onSale = g.items.some((it) => effectiveStatus(it) !== "終了");
+    if (g.items.length && (onSale !== m.onSale || g.items.length !== m.shownCount)) {
+      m.setIcon(pinIcon(g, onSale));  // 色・数字を、表示する御泉印に合わせて描き直す
+    }
+    m.onSale = onSale;
+    m.shownCount = g.items.length;
+    if (g.items.length && (!onlyOnSale || onSale)) {
+      m.addTo(map);
+      shown++;
+    } else {
+      m.remove();
+    }
   }
+  hidePanel();
+  setStatus(`${shown} 地点`);
 }
 
 async function main() {
@@ -279,6 +304,7 @@ async function main() {
       g.lng = loc.lng;
       g.geoSource = loc.geo_source;
     }
+    g.allItems = g.items;  // 入手状況で絞り込むときの元の一覧
     addMarker(g);
   }
 
@@ -304,6 +330,10 @@ function focusFromHash() {
     showMessage("この事業者の場所は地図に表示できませんでした");
     return;
   }
+  if (!marker.group.items.length) {  // 入手状況の絞り込みで隠れている場合は「全て表示」に戻す
+    document.querySelector('input[name="collect-filter"][value="all"]').checked = true;
+    applyFilter();
+  }
   marker.addTo(map);  // 「販売終了の事業者を隠す」で隠れていても表示する
   map.setView(marker.getLatLng(), 16, { animate: false });
   setTimeout(() => {
@@ -316,5 +346,6 @@ function focusFromHash() {
 }
 
 document.getElementById("only-on-sale").addEventListener("change", applyFilter);
+for (const r of document.querySelectorAll('input[name="collect-filter"]')) r.addEventListener("change", applyFilter);
 window.addEventListener("hashchange", focusFromHash);
 main().catch((err) => showMessage(err.message));

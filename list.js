@@ -18,6 +18,9 @@ const yesNo = (label) => ({
   options: [["yes", label], ["no", "空欄"]],
 });
 const COLUMN_FILTERS = [
+  // 入手状況（このブラウザに記録したチェック）
+  { key: "collected", type: "choice", value: (it) => collection.has(it.id),
+    options: [["yes", "入手済み"], ["no", "未入手"]] },
   { key: "prefecture", type: "select" },
   { key: "musume_name", type: "select" },
   { key: "operator", type: "text" },
@@ -191,7 +194,9 @@ function render() {
   const list = filteredItems();
   tbody.innerHTML = list.map((it) => `
     <tr id="item-${it.id}" data-address="${escapeHtml(it.operator_address)}"
-        class="${effectiveStatus(it) === "終了" ? "ended" : ""}">
+        class="${effectiveStatus(it) === "終了" ? "ended" : ""} ${collection.has(it.id) ? "is-collected" : ""}">
+      <td class="c collect-col"><input type="checkbox" data-collect="${it.id}"
+        ${collection.has(it.id) ? "checked" : ""} aria-label="入手済み"></td>
       <td class="c">${escapeHtml(it.prefecture)}</td>
       <td>${escapeHtml(it.musume_name)}</td>
       <td>${escapeHtml(it.operator)}</td>
@@ -216,6 +221,7 @@ function render() {
       </td>
     </tr>`).join("");
   $("#count").textContent = `${list.length} / ${items.length} 件`;
+  updateCollectedCount();
   $("#empty").hidden = items.length > 0;
   updateDatalists();
   updateFilterOptions();
@@ -481,6 +487,106 @@ form.addEventListener("submit", async (e) => {
 
 // ---------------------------------------------------------------- 一覧の操作
 
+// ---------------------------------------------------------------- 入手状況のチェック・出力・取り込み
+
+function updateCollectedCount() {
+  $("#collected-count").textContent = `入手済み ${collection.count(items)} / ${items.length}`;
+}
+
+tbody.addEventListener("change", (e) => {
+  const id = e.target.dataset.collect;
+  if (!id) return;
+  collection.set(id, e.target.checked);
+  e.target.closest("tr").classList.toggle("is-collected", e.target.checked);
+  updateCollectedCount();
+  // 「入手済み」「未入手」で絞り込んでいるときは、条件に合わなくなった行を消すため描き直す
+  if (filters.collected) render();
+});
+
+// Excel 出力：ダウンロードした Excel の「入手」列に、このブラウザの取得状況（◯）を書き込んでから保存する。
+// サーバー（公開サイトでは書き出し済みのファイル）は「入手」列に御泉印の ID を見えない書式で入れているので、
+// それを目印に書き換える。書式は同じ行の「ピクニック部」のセル（枠線・中央揃え・終了行の灰色）に合わせる
+$("#btn-excel").addEventListener("click", async (e) => {
+  if (!window.JSZip) return;  // 部品が読み込めていなければ、取得状況なしの Excel をそのままダウンロードする
+  e.preventDefault();
+  const btn = $("#btn-excel");
+  const label = btn.textContent;
+  btn.textContent = "作成中…";
+  try {
+    const res = await fetch(btn.href);
+    if (!res.ok) throw new Error(`Excel を取得できませんでした (${res.status})`);
+    const zip = await JSZip.loadAsync(await res.arrayBuffer());
+    const sheetPath = "xl/worksheets/sheet1.xml";
+    const doc = new DOMParser().parseFromString(await zip.file(sheetPath).async("string"), "application/xml");
+    const ns = doc.documentElement.namespaceURI;
+    const colOf = (cell) => cell.getAttribute("r").replace(/\d+$/, "");
+    const rows = [...doc.getElementsByTagNameNS(ns, "row")];
+    const header = new Map([...rows[0].getElementsByTagNameNS(ns, "c")].map((c) => [c.textContent.trim(), colOf(c)]));
+    const colCollected = header.get("入手");
+    const colPicnic = header.get("ピクニック部");
+    if (!colCollected) throw new Error("Excel に「入手」の列が見つかりませんでした");
+    for (const row of rows.slice(1)) {
+      const cells = [...row.getElementsByTagNameNS(ns, "c")];
+      const cell = cells.find((c) => colOf(c) === colCollected);
+      if (!cell) continue;
+      const id = Number(cell.textContent);
+      const style = cells.find((c) => colOf(c) === colPicnic)?.getAttribute("s") || cell.getAttribute("s");
+      const fresh = doc.createElementNS(ns, "c");
+      fresh.setAttribute("r", cell.getAttribute("r"));
+      if (style) fresh.setAttribute("s", style);
+      if (collection.has(id)) {
+        fresh.setAttribute("t", "inlineStr");
+        const is = doc.createElementNS(ns, "is");
+        const t = doc.createElementNS(ns, "t");
+        t.textContent = "◯";
+        is.appendChild(t);
+        fresh.appendChild(is);
+      }
+      row.replaceChild(fresh, cell);
+    }
+    zip.file(sheetPath, new XMLSerializer().serializeToString(doc));
+    const blob = await zip.generateAsync({
+      type: "blob", compression: "DEFLATE",
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `御泉印リスト_${todayStr().replace(/-/g, "")}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  } catch (err) {
+    alert(`Excel の作成に失敗しました：${err.message}`);
+  } finally {
+    btn.textContent = label;
+  }
+});
+
+$("#btn-collection-export").addEventListener("click", () => {
+  const n = collection.exportFile(items);
+  if (!n) alert("入手済みの御泉印がまだありません（空の記録として出力しました）");
+});
+
+$("#btn-collection-import").addEventListener("click", () => $("#collection-file").click());
+$("#collection-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";  // 同じファイルをもう一度選んでも読み込めるようにする
+  if (!file) return;
+  try {
+    const { ids, unmatched } = collection.parseFile(await file.text(), items);
+    const now = collection.count(items);
+    if (!confirm(`ファイルの入手済み ${ids.size} 件で、今の記録（入手済み ${now} 件）を置き換えます。よろしいですか？`)) return;
+    collection.replace(ids);
+    render();
+    alert(`取得状況を取り込みました（入手済み ${collection.count(items)} 件）` +
+      (unmatched ? `
+※ ${unmatched} 件は、今のリストに該当する御泉印が見つかりませんでした` : ""));
+  } catch (err) {
+    alert(`取り込めませんでした：${err instanceof SyntaxError ? "ファイルの形式が正しくありません" : err.message}`);
+  }
+});
+
 tbody.addEventListener("click", async (e) => {
   const editId = e.target.dataset.edit;
   const deleteId = e.target.dataset.delete;
@@ -501,10 +607,6 @@ tbody.addEventListener("click", async (e) => {
 
 $("#btn-add").addEventListener("click", () => openDialog());
 
-// 最終更新日（＝最後に「公開」を押した日）を件数の上に表示する。記録は日時だが、表示は日付まで
-function showUpdated(updated) {
-  $("#updated").textContent = updated ? `最終更新 ${updated.slice(0, 10)}` : "";
-}
 
 // 書影の一括書き出し（管理用）：サーバーで JPG に変換して ZIP にまとめ、ダウンロードする
 $("#btn-export-images").addEventListener("click", async () => {
@@ -564,7 +666,6 @@ window.addEventListener("hashchange", highlightFromHash);
 
 (async () => {
   initSelects();
-  showUpdated(SITE.static ? SITE.updated : (await fetchConfig()).lastPublished);
   try {
     items = await fetchItems();
   } catch (err) {

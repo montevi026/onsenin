@@ -99,7 +99,9 @@ $("#sort-start-date").addEventListener("click", () => {
 });
 
 function buildFilterRow() {
-  const cells = COLUMN_FILTERS.map((f) => {
+  // 見出しの文字（スマホでは見出し行を隠し、絞り込み欄の上に項目名として出す）
+  const labels = [...document.querySelectorAll("#list thead tr:first-child th")].map((th) => th.textContent.trim());
+  const cells = COLUMN_FILTERS.map((f, i) => {
     let ctrl;
     if (f.type === "select") {
       ctrl = `<select data-filter="${f.key}"></select>`;
@@ -112,7 +114,7 @@ function buildFilterRow() {
       ctrl = `<input type="date" data-filter="${f.key}" data-bound="from" title="この日から">
               <input type="date" data-filter="${f.key}" data-bound="to" title="この日まで">`;
     }
-    return `<th>${ctrl}</th>`;
+    return `<th data-label="${escapeHtml(labels[i] || "")}"${f.type === "range" ? ' class="range"' : ""}>${ctrl}</th>`;
   });
   $("#filter-row").innerHTML = cells.join("") + '<th class="admin-only"></th>';
 }
@@ -159,7 +161,16 @@ function updateFilterHighlight() {
       .forEach((el) => el.classList.toggle("active", isActive(f)));
   }
   $("#btn-clear").hidden = !COLUMN_FILTERS.some(isActive) && !$("#q").value;
+  const n = COLUMN_FILTERS.filter(isActive).length;
+  $("#btn-filter-toggle").textContent = n ? `絞り込み（${n}）` : "絞り込み";
+  $("#btn-filter-toggle").classList.toggle("active", n > 0);
 }
+
+// スマホ表示：絞り込み欄（表の見出し部分）の開閉
+$("#btn-filter-toggle").addEventListener("click", () => {
+  const open = $(".table-wrap").classList.toggle("filters-open");
+  $("#btn-filter-toggle").setAttribute("aria-expanded", String(open));
+});
 
 $("#filter-row").addEventListener("input", (e) => {
   const key = e.target.dataset.filter;
@@ -190,30 +201,39 @@ function bookImage(it) {
   return `<img src="${it.image_url}" width="150" alt="${escapeHtml(it.musume_name)} ${escapeHtml(it.version)}" loading="lazy">`;
 }
 
+// スマホのカード表示用：発売期間（例: 2025-04-01〜2025-06-30）と部活動のタグ
+function mobileMeta(it) {
+  const dates = it.start_date || it.end_date ? `${it.start_date || ""}〜${it.end_date || ""}` : "";
+  const tags = [it.picnic && "ピクニック部", it.sangaku && "山岳部"].filter(Boolean)
+    .map((t) => `<span class="tag">${t}</span>`).join("");
+  return dates || tags ? `<span class="m-only">${escapeHtml(dates)}${tags}</span>` : "";
+}
+
 function render() {
   const list = filteredItems();
+  // 各セルの class は、スマホのカード表示で配置を決めるのに使う（style.css）
   tbody.innerHTML = list.map((it) => `
     <tr id="item-${it.id}" data-address="${escapeHtml(it.operator_address)}"
         class="${effectiveStatus(it) === "終了" ? "ended" : ""} ${collection.has(it.id) ? "is-collected" : ""}">
-      <td class="c collect-col"><input type="checkbox" data-collect="${it.id}"
-        ${collection.has(it.id) ? "checked" : ""} aria-label="入手済み"></td>
-      <td class="c">${escapeHtml(it.prefecture)}</td>
-      <td>${escapeHtml(it.musume_name)}</td>
-      <td>${escapeHtml(it.operator)}</td>
-      <td>${escapeHtml(it.operator_hours)}</td>
-      <td>${escapeHtml(it.operator_address)}</td>
-      <td>${escapeHtml(it.version)}</td>
+      <td class="c collect-col"><label class="collect-label"><input type="checkbox" data-collect="${it.id}"
+        ${collection.has(it.id) ? "checked" : ""} aria-label="入手済み"><span class="m-only">入手</span></label></td>
+      <td class="c pref">${escapeHtml(it.prefecture)}</td>
+      <td class="musume"><span class="m-only m-pref">${escapeHtml(it.prefecture)}</span>${escapeHtml(it.musume_name)}</td>
+      <td class="operator">${escapeHtml(it.operator)}</td>
+      <td class="hours">${escapeHtml(it.operator_hours)}</td>
+      <td class="address">${escapeHtml(it.operator_address)}</td>
+      <td class="version">${escapeHtml(it.version)}</td>
       <td class="c img">${it.image_url
         ? (it.operator_address
           // 書影をクリックすると、マップでその事業者の場所を拡大して表示する
           ? `<a href="${MAP_URL}#addr=${encodeURIComponent(it.operator_address.trim())}" title="マップで表示">${bookImage(it)}</a>`
           : bookImage(it))
         : `<span class="noimg">画像なし</span>`}</td>
-      <td class="c">${statusBadge(effectiveStatus(it))}</td>
-      <td class="c">${escapeHtml(it.start_date || "")}</td>
-      <td class="c">${escapeHtml(it.end_date || "")}</td>
-      <td class="c">${it.picnic ? "◯" : ""}</td>
-      <td class="c">${it.sangaku ? "◯" : ""}</td>
+      <td class="c status">${statusBadge(effectiveStatus(it))}</td>
+      <td class="c start">${it.start_date ? `<span class="pc-only">${escapeHtml(it.start_date)}</span>` : ""}${mobileMeta(it)}</td>
+      <td class="c end">${escapeHtml(it.end_date || "")}</td>
+      <td class="c club">${it.picnic ? "◯" : ""}</td>
+      <td class="c club">${it.sangaku ? "◯" : ""}</td>
       <td class="note">${escapeHtml(it.note || "")}</td>
       <td class="c actions admin-only">
         <button class="btn small" data-edit="${it.id}">編集</button>

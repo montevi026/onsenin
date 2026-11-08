@@ -413,3 +413,109 @@ td.img a img:hover { outline: 2px solid var(--accent); }
   padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,.85);
   color: var(--text); font-size: 11px; line-height: 1.4; text-align: right; overflow-wrap: anywhere;
 }
+
+/* ---------- リストのスマホ表示（幅767px以下） ----------
+   表をやめ、1件を1枚のカードにして縦に並べる。HTML は PC と同じ表のまま、CSS だけで並べ替える */
+.m-only { display: none; }
+.tag {
+  display: inline-block; margin-left: 6px; padding: 0 7px; border-radius: 999px;
+  background: #f3ece2; color: #6b625a; font-size: 11.5px; white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .m-only { display: inline; }
+  .btn.m-only { display: inline-block; }
+  .pc-only { display: none; }
+
+  /* ヘッダーを詰めて、ボタンが画面からはみ出さないようにする */
+  .site-header { padding: 8px 12px; gap: 6px 12px; }
+  .site-header h1 { font-size: 18px; }
+  .site-header nav a { padding: 5px 10px; font-size: 13.5px; }
+  .notice-button { font-size: 13px; padding: 4px 10px; }
+
+  /* 画面全体をスクロールする（PC は表の中だけスクロール） */
+  body:not(.map-body):not(.gallery-body) { display: block; height: auto; }
+  body:not(.map-body):not(.gallery-body) main { display: block; padding: 10px 10px 24px; }
+
+  /* ツールバー：検索欄は1行使い、件数は最後の行に */
+  .toolbar { gap: 6px; margin-bottom: 10px; }
+  .toolbar input[type="search"] { flex: 1 1 100%; max-width: none; }
+  .toolbar .spacer { display: none; }
+  .toolbar .btn { padding: 5px 10px; font-size: 12.5px; }
+  .toolbar .count-box { order: 10; flex: 1 1 100%; flex-direction: row; justify-content: space-between; }
+  #btn-filter-toggle.active { border-color: var(--accent); color: var(--accent); background: #fff1ec; }
+  /* iPhone で入力欄を選んだときに画面が拡大されないよう、文字は16px以上にする */
+  .toolbar input, #list thead input, #list thead select { font-size: 16px; }
+
+  .table-wrap { overflow: visible; background: none; border: none; border-radius: 0; }
+  #list, #list thead, #list tbody, #list tr, #list th, #list td { display: block; }
+  #list { min-width: 0; }
+
+  /* 絞り込み欄：「絞り込み」ボタンで開閉。項目名を上に出して2列に並べる */
+  #list thead {
+    display: none; position: static; margin-bottom: 10px; padding: 10px;
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+  }
+  .filters-open #list thead { display: block; }
+  #list thead tr:first-child th { display: none; }
+  #list thead tr:first-child th.sortable {
+    display: inline-block; margin-bottom: 10px; padding: 5px 12px;
+    border: 1px solid #cfc6ba; border-radius: 6px; background: #fff; font-weight: normal;
+  }
+  #list thead th.sortable::before { content: "並べ替え："; }
+  #list thead th.sortable:not(.sorted)::after { content: "（元の並び）"; color: #8a8178; }
+  #list .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  #list .filter-row th {
+    display: flex; flex-direction: column; gap: 2px; padding: 0;
+    background: none; border: none; text-align: left;
+  }
+  #list .filter-row th::before { content: attr(data-label); font-size: 11.5px; color: #6b625a; }
+  #list .filter-row th.admin-only { display: none; }
+  #list .filter-row select, #list .filter-row input { min-width: 0; padding: 4px 6px; }
+  #list .filter-row th.range { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+  #list .filter-row th.range::before { flex-basis: 100%; }
+  #list .filter-row th.range input { flex: 1; width: auto; min-width: 0; margin-top: 0; }
+
+  /* カード：左に書影、右に情報。右上に入手チェックと発売状況 */
+  #list tbody { display: flex; flex-direction: column; gap: 10px; }
+  #list tbody tr {
+    display: grid; grid-template-columns: 92px 1fr auto;
+    grid-template-rows: auto auto auto auto auto auto 1fr auto auto;
+    column-gap: 12px; padding: 10px; background: #fff;
+    border: 1px solid var(--line); border-radius: 10px;
+  }
+  #list tbody td {
+    padding: 1px 0; border: none; background: none; text-align: left;
+    min-width: 0; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5;
+  }
+  #list tbody td:empty, #list td.pref, #list td.end, #list td.club { display: none; }
+  #list td.img { grid-column: 1; grid-row: 1 / 8; width: auto; }
+  #list td.img img { width: 92px; margin: 0; }
+  #list td.img .noimg {
+    display: grid; place-items: center; width: 92px; aspect-ratio: 2 / 3;
+    background: #f3ece2; border-radius: 4px;
+  }
+  #list td.collect-col { grid-column: 3; grid-row: 1 / 3; width: auto; }
+  .collect-label { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: #6b625a; cursor: pointer; }
+  #list td.collect-col input { width: 26px; height: 26px; margin: 0; }
+  #list td.musume { grid-column: 2; grid-row: 1; font-size: 15px; font-weight: bold; }
+  .m-pref { margin-right: 6px; padding-right: 6px; border-right: 1px solid var(--line); font-size: 12px; font-weight: normal; color: #6b625a; }
+  #list td.version { grid-column: 2; grid-row: 2; font-weight: bold; color: var(--accent); }
+  #list td.status { grid-column: 2; grid-row: 3; }
+  #list td.operator { grid-column: 2 / 4; grid-row: 4; font-weight: bold; }
+  #list td.hours { grid-column: 2 / 4; grid-row: 5; color: #6b625a; }
+  #list td.address { grid-column: 2 / 4; grid-row: 6; color: #6b625a; font-size: 12px; }
+  #list td.start { grid-column: 2 / 4; grid-row: 7; align-self: start; font-size: 12px; }
+  #list td.note {
+    grid-column: 1 / -1; grid-row: 8; max-width: none; margin-top: 8px; padding: 6px 8px;
+    background: #faf7f2; border-radius: 6px; font-size: 12.5px;
+  }
+  #list td.actions { grid-column: 1 / -1; grid-row: 9; margin-top: 8px; text-align: right; }
+  #list td.hours::before { content: "時間："; }
+  #list td.address::before { content: "住所："; }
+
+  /* 終了・入手済み・マップから選んだ行の色分け（PC の表と同じ意味） */
+  #list tr.ended { background: #f4f1ec; }
+  #list tr.ended td { color: #8a8178; }
+  #list tr.is-collected { background: #eef8f0; border-color: #a9d5b8; }
+  #list tr.highlight, #list tr.is-collected.highlight { background: #fff4c2; }
+}

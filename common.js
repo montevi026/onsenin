@@ -6,6 +6,10 @@ const LIST_URL = SITE.static ? "index.html" : "/";
 const MAP_URL = SITE.static ? "map.html" : "/map";
 const GALLERY_URL = SITE.static ? "gallery.html" : "/gallery";
 document.documentElement.classList.toggle("static", SITE.static);
+// 公開サイトでは、ホーム画面に追加して使えるよう（PWA）、サービスワーカーを登録する
+if (SITE.static && "serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(() => { /* 使えない環境ではそのまま普通のサイトとして動く */ });
+}
 
 const PREFECTURES = [
   "北海道", "青森", "岩手", "宮城", "秋田", "山形", "福島",
@@ -108,6 +112,9 @@ const NOTICE_HTML = `
 // ---------------------------------------------------------------- ヘッダー右上の「最終更新」の更新履歴
 // マウスを乗せる（スマホはタップ）と表示する。新しいものを上に追記していく
 const UPDATE_HISTORY = [
+  { date: "2026/11/9", items: [
+    "アプリとしてインストールできるようにしました。スマホ上で「ホーム画面に追加」→「インストール」を選ぶことでインストールできます。",
+  ] },
   { date: "2026/11/8", items: [
     "スマホでの表示方法を調整しました",
     "越後湯沢かすみのNASPAニューオータニ御泉印を追加しました",

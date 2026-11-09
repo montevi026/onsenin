@@ -2,7 +2,7 @@
 // ページ・データは「通信できればいつも最新を取得し、圏外のときは前回の内容を表示する」。
 // 書影は一度見たものを保存して使い回し、裏で最新に差し替える。
 // 地図タイルなど、ほかのサイトのファイルは扱わない。
-const CACHE = "onsenin-v2";
+const CACHE = "onsenin-v3";
 const CORE = ["./", "index.html", "map.html", "gallery.html", "style.css", "common.js",
   "list.js", "map.js", "gallery.js", "vendor/jszip.min.js", "data/items.json", "icon-192.png"];
 
@@ -26,7 +26,10 @@ const cacheKey = (req) => {
 async function networkFirst(req) {
   const cache = await caches.open(CACHE);
   try {
-    const res = await fetch(req);
+    // ブラウザに一時保存された古いファイルを使わず、必ずサーバーに最新か確認する
+    const res = req.mode === "navigate"
+      ? await fetch(req.url, { cache: "no-cache", credentials: "same-origin" })
+      : await fetch(req, { cache: "no-cache" });
     if (res.ok) cache.put(cacheKey(req), res.clone());
     return res;
   } catch (err) {
